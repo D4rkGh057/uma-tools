@@ -434,6 +434,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return [regions, (s: RaceState) => s.activateCountHeal >= n] as [RegionList, DynamicCondition];
 		}
 	}),
+	activate_count_later_half: noopImmediate,
 	activate_count_middle: immediate({
 		filterGte(regions: RegionList, n: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
 			return [regions, (s: RaceState) => s.activateCount[1] >= n] as [RegionList, DynamicCondition];
@@ -636,6 +637,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		}
 	}),
 	infront_near_lane_time: noopErlangRandom(3, 2.0),
+	is_activate_any_skill: noopImmediate,
 	is_activate_other_skill_detail: immediate({
 		filterEq(regions: RegionList, one: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
 			assert(one == 1, 'must be is_activate_other_skill_detail==1');
@@ -734,6 +736,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		}
 	}),
 	is_move_lane: noopErlangRandom(5, 1.0),
+	is_other_character_activate_advantage_skill: noopImmediate,
 	is_overtake: noopErlangRandom(1, 2.0),
 	is_surrounded: noopErlangRandom(3, 2.0),
 	is_temptation: noopImmediate,
@@ -743,6 +746,14 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		}
 	}),
 	lane_type: noopImmediate,
+	last_straight_random: random({
+		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
+			assert(one == 1, 'must be last_straight_random==1');
+			assert(CourseHelpers.isSortedByStart(course.straights), 'course straights must be sorted by start');
+			const lastStraight = course.straights[course.straights.length - 1];
+			return regions.rmap(r => r.intersect(lastStraight));
+		}
+	}),
 	lastspurt: immediate({
 		filterEq(regions: RegionList, case_: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			// NB. not entirely sure these are correct, based on some vague remarks made by kuromi once
@@ -770,6 +781,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	order_rate: orderFilter((rate: number, numUmas: number) => Math.round(numUmas * (rate / 100.0))),
 	order_rate_in20_continue: orderInFilter(0.2),
 	order_rate_in40_continue: orderInFilter(0.4),
+	order_rate_in50_continue: orderInFilter(0.5),
 	order_rate_in80_continue: orderInFilter(0.8),
 	order_rate_out20_continue: orderOutFilter(0.2),
 	order_rate_out40_continue: orderOutFilter(0.4),
@@ -965,6 +977,10 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	running_style_temptation_count_senko: noopSectionRandom(2,9),
 	running_style_temptation_count_sashi: noopSectionRandom(2,9),
 	running_style_temptation_count_oikomi: noopSectionRandom(2,9),
+	running_style_temptation_opponent_count_nige: noopSectionRandom(2,9),
+	running_style_temptation_opponent_count_senko: noopSectionRandom(2,9),
+	running_style_temptation_opponent_count_sashi: noopSectionRandom(2,9),
+	running_style_temptation_opponent_count_oikomi: noopSectionRandom(2,9),
 	same_skill_horse_count: noopImmediate,
 	season: valueFilter((_0: CourseData, _1: HorseParameters, extra: RaceParameters) => extra.season),
 	slope: immediate({
@@ -1008,6 +1024,8 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	temptation_count: noopImmediate,
 	temptation_count_behind: noopSectionRandom(2,9),
 	temptation_count_infront: noopSectionRandom(2,9),
+	temptation_opponent_count_behind: noopSectionRandom(2,9),
+	temptation_opponent_count_infront: noopSectionRandom(2,9),
 	time: valueFilter((_0: CourseData, _1: HorseParameters, extra: RaceParameters) => extra.time),
 	track_id: valueFilter((course: CourseData, _: HorseParameters, extra: RaceParameters) => course.raceTrackId),
 	up_slope_random: random({
