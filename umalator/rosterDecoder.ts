@@ -104,6 +104,43 @@ export interface DecodedUma {
     apt_sashi: number;
     apt_oikomi: number;
     skills: Array<{ id: number; level: number }>;
+    // explicit trained strategy (1=Nige,2=Senkou,3=Sasi,4=Oikomi,5=Oonige), matching uma-skill-tools/HorseTypes.ts's Strategy enum.
+    // only present when decoded from raw trained_chara JSON (see convertExtractorJson); other formats infer strategy from
+    // whichever apt_nige/senko/sashi/oikomi is highest instead.
+    running_style?: number;
+}
+
+// Converts the raw `trained_chara` JSON array produced by memory-extraction tools (e.g. umaextractor) into DecodedUma[].
+// This format carries the real, unscaled skill level (skill_array[].level) and an explicit running_style field, so it's
+// strictly more accurate than the roster.uma.guide bulk export (version 4 format, 1-bit skill level) or the aptitude-guessing
+// fallback used for strategy in the other formats.
+export function convertExtractorJson(raw: any[]): DecodedUma[] {
+    if (!Array.isArray(raw)) return [];
+    return raw
+        .filter(u => u && typeof u.card_id === 'number')
+        .map(u => ({
+            card_id: u.card_id,
+            talent_level: u.talent_level,
+            rank_score: u.rank_score,
+            create_time: u.create_time,
+            speed: u.speed,
+            stamina: u.stamina,
+            power: u.power,
+            guts: u.guts,
+            wisdom: u.wiz,
+            apt_short: u.proper_distance_short,
+            apt_mile: u.proper_distance_mile,
+            apt_middle: u.proper_distance_middle,
+            apt_long: u.proper_distance_long,
+            apt_turf: u.proper_ground_turf,
+            apt_dirt: u.proper_ground_dirt,
+            apt_nige: u.proper_running_style_nige,
+            apt_senko: u.proper_running_style_senko,
+            apt_sashi: u.proper_running_style_sashi,
+            apt_oikomi: u.proper_running_style_oikomi,
+            skills: Array.isArray(u.skill_array) ? u.skill_array.map((s: any) => ({ id: s.skill_id, level: s.level })) : [],
+            running_style: u.running_style,
+        }));
 }
 
 function readV4Uma(bv: BitVector): DecodedUma | null {

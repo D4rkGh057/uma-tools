@@ -1542,9 +1542,17 @@ function decodedUmaToUmaState(uma: DecodedUma): UmaState {
         { key: 'apt_sashi'  as const, strat: 'Sasi'    as const },
         { key: 'apt_oikomi' as const, strat: 'Oikomi'  as const },
     ];
-    const bestStrat = strategies.reduce((best, curr) =>
-        uma[curr.key] >= uma[best.key] ? curr : best
-    );
+    // prefer the explicit trained strategy (from convertExtractorJson) over guessing from the highest aptitude —
+    // Oonige has no aptitude of its own in-game, it uses Nige's proficiency.
+    const RUNNING_STYLE_STRATEGY = {
+        1: { key: 'apt_nige'   as const, strat: 'Nige'    as const },
+        2: { key: 'apt_senko'  as const, strat: 'Senkou'  as const },
+        3: { key: 'apt_sashi'  as const, strat: 'Sasi'    as const },
+        4: { key: 'apt_oikomi' as const, strat: 'Oikomi'  as const },
+        5: { key: 'apt_nige'   as const, strat: 'Oonige'  as const },
+    };
+    const bestStrat = (uma.running_style != null && RUNNING_STYLE_STRATEGY[uma.running_style])
+        || strategies.reduce((best, curr) => uma[curr.key] >= uma[best.key] ? curr : best);
     const bestDistApt = Math.max(uma.apt_short, uma.apt_mile, uma.apt_middle, uma.apt_long);
     const bestSurfApt = Math.max(uma.apt_turf, uma.apt_dirt);
 

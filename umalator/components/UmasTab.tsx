@@ -2,7 +2,7 @@ import { h, Fragment } from 'preact';
 import { useState, useEffect, useCallback, useMemo, useContext } from 'preact/hooks';
 import { Text, IntlContext } from 'preact-i18n';
 
-import { decodeRoster, saveRoster, loadRoster, DecodedUma } from '../rosterDecoder';
+import { decodeRoster, saveRoster, loadRoster, convertExtractorJson, DecodedUma } from '../rosterDecoder';
 import './UmasTab.css';
 
 import umas from '../../umas.json';
@@ -629,6 +629,28 @@ export function UmasTab({ onLoadUma1, onLoadUma2, onExport }: UmasTabProps = {})
         localStorage.removeItem(STORAGE_KEY);
     }, []);
 
+    const handleExtractorFile = useCallback((e: Event) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        (e.target as HTMLInputElement).value = '';
+        if (!file) return;
+        setImportError('');
+        setIsImporting(true);
+        file.text()
+            .then(text => {
+                const parsed = JSON.parse(text);
+                const arr = Array.isArray(parsed) ? parsed : [parsed];
+                const decoded = convertExtractorJson(arr);
+                if (decoded.length === 0) {
+                    setImportError('Could not read any umas from that file.');
+                } else {
+                    setImportedUmas(decoded);
+                    saveRoster(decoded).then(encoded => localStorage.setItem(STORAGE_KEY, encoded));
+                }
+            })
+            .catch((err: any) => setImportError('Failed to read JSON file: ' + (err?.message ?? 'Unknown error')))
+            .finally(() => setIsImporting(false));
+    }, []);
+
     const availableSkills = useMemo(() => buildSkillIndex(importedUmas, intlSkillNames), [importedUmas, intlSkillNames]);
 
     const visible = useMemo(() => {
@@ -680,6 +702,16 @@ export function UmasTab({ onLoadUma1, onLoadUma2, onExport }: UmasTabProps = {})
                     <button class="umasImportBtn" onClick={handleImport} disabled={isImporting || !inputValue.trim()}>
                         {isImporting ? 'Importing…' : 'Import'}
                     </button>
+                    <label class="umasImportBtn umasImportExtractorBtn">
+                        Import JSON file
+                        <input
+                            type="file"
+                            accept="application/json,.json"
+                            style="display:none"
+                            onChange={handleExtractorFile}
+                            disabled={isImporting}
+                        />
+                    </label>
                     {importedUmas.length > 0 && (
                         <button class="umasClearAllBtn" onClick={handleClear} title="Remove all imported umas">
                             Clear
@@ -690,7 +722,9 @@ export function UmasTab({ onLoadUma1, onLoadUma2, onExport }: UmasTabProps = {})
                 <p class="umasImportHint">
                     Export your trained umas at{' '}
                     <a href="https://roster.uma.guide/" target="_blank" rel="noopener">roster.uma.guide</a>
-                    {' '}— paste the full URL here to load your roster.
+                    {' '}— paste the full URL here to load your roster. Or load a raw trained-chara JSON file
+                    (array of umas, e.g. from a memory-extraction tool) with "Import JSON file" — skill levels
+                    from that format are exact, unlike the bulk roster.uma.guide export.
                     {importedUmas.length > 0 && (
                         <span class="umasLoadedCount"> {importedUmas.length} uma{importedUmas.length !== 1 ? 's' : ''} loaded.</span>
                     )}
