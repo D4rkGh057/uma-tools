@@ -496,7 +496,21 @@ export class RaceSolver {
 		this.targetLane = initialLane;
 		this.laneChangeSpeed = 0.0;
 		this.extraMoveLane = -1.0;
-		this.forceInSpeed = 0.0;
+
+		// force-in modifier: applied in the early-race when starting more than 0.12 course width from the inner fence.
+		// NB. we don't track other umas' gate positions at construction time, so this doesn't check whether the inside is open.
+		if (initialLane > 0.12 * this.course.courseWidth) {
+			const ForceInStrategyModifier = {
+				[Strategy.Nige]: 0.02,
+				[Strategy.Oonige]: 0.02,
+				[Strategy.Senkou]: 0.01,
+				[Strategy.Sasi]: 0.01,
+				[Strategy.Oikomi]: 0.03
+			};
+			this.forceInSpeed = 0.1 * this.rng.random() + ForceInStrategyModifier[this.horse.strategy];
+		} else {
+			this.forceInSpeed = 0.0;
+		}
 
 		this.modifiers = {
 			targetSpeed: new CompensatedAccumulator(0.0),
@@ -1189,6 +1203,10 @@ export class RaceSolver {
 			this.targetSpeed += this.sectionModifier[Math.floor(this.pos / this.sectionLength)];
 		}
 		this.targetSpeed += this.modifiers.targetSpeed.acc + this.modifiers.targetSpeed.err;
+
+		if (this.phase == 0) {
+			this.targetSpeed += this.forceInSpeed;
+		}
 
 		if (this.isDownhillMode) {
 			this.targetSpeed += 0.3 + this.slopePer / 100000.0;

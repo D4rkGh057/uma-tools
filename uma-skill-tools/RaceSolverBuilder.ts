@@ -1,7 +1,7 @@
 import { HorseParameters, Strategy, Aptitude } from './HorseTypes';
 import { CourseData, CourseHelpers, DistanceType } from './CourseData';
 import { Region, RegionList } from './Region';
-import { Rule30CARng, SeededRng } from './Random';
+import { PRNG, Rule30CARng, SeededRng } from './Random';
 import { Conditions, random, immediate, noopRandom } from './ActivationConditions';
 import { ActivationSamplePolicy, ImmediatePolicy } from './ActivationSamplePolicy';
 import { getParser } from './ConditionParser';
@@ -49,7 +49,7 @@ namespace Asitame {
 		[0, 1.0, 0.9, 1.0,   0.9,  1.0]   // long
 	]);
 
-	export const BaseModifier = 0.00875;
+	export const BaseModifier = Math.sqrt(130) * 0.001;
 
 	export function calcApproximateModifier(power: number, strategy: Strategy, distance: DistanceType) {
 		return BaseModifier * Math.sqrt(power - 1200) * StrategyDistanceCoefficient[distance][strategy];
@@ -61,13 +61,21 @@ namespace StaminaSyoubu {
 		if (distance < 2101) return 0.0;
 		else if (distance < 2201) return 0.5;
 		else if (distance < 2401) return 1.0;
-		else if (distance < 2601) return 1.2;
-		else return 1.5;
+		else if (distance < 2601) return 1.5;  // 1.2 before the 2024-10-29 update
+		else return 1.8;  // 1.5 before the 2024-10-29 update
 	}
 
-	export function calcApproximateModifier(stamina: number, distance: number) {
-		const randomFactor = 1.0;  // TODO implement random factor scaling based on power (unclear how this works currently)
-		return Math.sqrt(stamina - 1200) * 0.0085 * distanceFactor(distance) * randomFactor;
+	// TargetSpeedRandomTableChangeProbabilityByPower and how power affects table selection are undocumented,
+	// so this just uses the known fixed 50/30/20% table weights with a uniform roll within each table's range.
+	function rollRandomFactor(rng: PRNG) {
+		const roll = rng.random() * 100.0;
+		if (roll < 50.0) return 0.98 + rng.random() * 0.02;       // table 0 (50%): 0.98-1.00
+		else if (roll < 80.0) return 0.95 + rng.random() * 0.03;  // table 1 (30%): 0.95-0.98
+		else return 1.00 + rng.random() * 0.02;                   // table 2 (20%): 1.00-1.02
+	}
+
+	export function calcApproximateModifier(stamina: number, distance: number, rng: PRNG) {
+		return Math.sqrt(stamina - 1200) * 0.0085 * distanceFactor(distance) * rollRandomFactor(rng);
 	}
 }
 
@@ -246,15 +254,42 @@ function isTarget(self: Perspective, targetType: SkillTarget) {
 	return targetType == SkillTarget.All || self == Perspective.Any || ((self == Perspective.Self) == (targetType == SkillTarget.Self));
 }
 
-function buildSkillEffects(skill, perspective: Perspective) {
+// Skill Level multiplier table, sourced from master.mdb's skill_level_value (ability_type, level, float_ability_value_coef).
+// Only unique skills (rarity 3-5 in skilldata) actually vary in level in-game; white/gold skills are always effectively level 1,
+// so callers should only pass a level != 1 for unique skills.
+const SkillLevelCoefficient = Object.freeze({
+	[SkillType.TargetSpeed]: Object.freeze([, 1.00, 1.01, 1.04, 1.07, 1.10, 1.13, 1.16, 1.19, 1.22, 1.25]),
+	[SkillType.Accel]: Object.freeze([, 1.00, 1.02, 1.04, 1.06, 1.08, 1.10, 1.125, 1.15, 1.175, 1.20]),
+	[SkillType.SpeedUp]: Object.freeze([, 1.00, 1.01, 1.02, 1.03, 1.04, 1.05, 1.06, 1.07, 1.08, 1.10]),
+	[SkillType.StaminaUp]: Object.freeze([, 1.00, 1.01, 1.02, 1.03, 1.04, 1.05, 1.06, 1.07, 1.08, 1.10]),
+	[SkillType.PowerUp]: Object.freeze([, 1.00, 1.01, 1.02, 1.03, 1.04, 1.05, 1.06, 1.07, 1.08, 1.10]),
+	[SkillType.GutsUp]: Object.freeze([, 1.00, 1.01, 1.02, 1.03, 1.04, 1.05, 1.06, 1.07, 1.08, 1.10]),
+	[SkillType.WisdomUp]: Object.freeze([, 1.00, 1.01, 1.02, 1.03, 1.04, 1.05, 1.06, 1.07, 1.08, 1.10]),
+	[SkillType.Recovery]: Object.freeze([, 1.00, 1.02, 1.04, 1.06, 1.08, 1.10, 1.12, 1.14, 1.16, 1.18]),
+	[SkillType.MultiplyStartDelay]: Object.freeze([, 1.00, 1.02, 1.04, 1.06, 1.08, 1.10, 1.12, 1.14, 1.16, 1.18]),
+	[SkillType.SetStartDelay]: Object.freeze([, 1.00, 1.02, 1.04, 1.06, 1.08, 1.10, 1.12, 1.14, 1.16, 1.18]),
+	[SkillType.CurrentSpeed]: Object.freeze([, 1.00, 1.02, 1.04, 1.06, 1.08, 1.10, 1.12, 1.14, 1.16, 1.18]),
+	[SkillType.CurrentSpeedWithNaturalDeceleration]: Object.freeze([, 1.00, 1.02, 1.04, 1.06, 1.08, 1.10, 1.12, 1.14, 1.16, 1.18]),
+	[SkillType.LaneMovementSpeed]: Object.freeze([, 1.00, 1.02, 1.04, 1.06, 1.08, 1.10, 1.12, 1.14, 1.16, 1.18]),
+	[SkillType.ChangeLane]: Object.freeze([, 1.00, 1.02, 1.04, 1.06, 1.08, 1.10, 1.12, 1.14, 1.16, 1.18])
+	// ActivateRandomGold and ExtendEvolvedDuration are not present in skill_level_value at all (no level scaling).
+});
+
+function skillLevelMultiplier(effectType: number, level: number) {
+	const curve = SkillLevelCoefficient[effectType];
+	if (curve == null || level <= 1) return 1.0;
+	return curve[Math.min(level, 10)];
+}
+
+function buildSkillEffects(skill, perspective: Perspective, level: number = 1) {
 	return skill.effects.map(ef => ({
 		type: SkillType.hasOwnProperty(ef.type) && isTarget(perspective, ef.target) ? ef.type : SkillType.Noop,
 		baseDuration: skill.baseDuration / 10000,
-		modifier: ef.modifier / 10000
+		modifier: ef.modifier / 10000 * skillLevelMultiplier(ef.type, level)
 	}));
 }
 
-export function buildSkillData(horse: HorseParameters, raceParams: PartialRaceParameters, course: CourseData, wholeCourse: RegionList, parser: {parse: any, tokenize: any}, skillId: string, perspective: Perspective, ignoreNullEffects: boolean = false) {
+export function buildSkillData(horse: HorseParameters, raceParams: PartialRaceParameters, course: CourseData, wholeCourse: RegionList, parser: {parse: any, tokenize: any}, skillId: string, perspective: Perspective, level: number = 1, ignoreNullEffects: boolean = false) {
 	if (!(skillId in skills)) {
 		throw new Error('bad skill ID ' + skillId);
 	}
@@ -292,7 +327,7 @@ export function buildSkillData(horse: HorseParameters, raceParams: PartialRacePa
 			// !!! FIXME this is actually bugged for NY Ace unique since she'll get both effects if she uses oonige.
 			continue;
 		}
-		const effects = buildSkillEffects(skill, perspective);
+		const effects = buildSkillEffects(skill, perspective, level);
 		if (effects.length > 0 || ignoreNullEffects) {
 			const rarity = skills[skillId].rarity;
 			triggers.push({
@@ -312,7 +347,7 @@ export function buildSkillData(horse: HorseParameters, raceParams: PartialRacePa
 	// however, for purposes of summer goldship unique (Adventure of 564), we still have to add something, since
 	// that could still cause them to activate. so just add the first alternative at a location after the course
 	// is over with a constantly false dynamic condition so that it never activates normally.
-	const effects = buildSkillEffects(alternatives[0], perspective);
+	const effects = buildSkillEffects(alternatives[0], perspective, level);
 	if (effects.length == 0 && !ignoreNullEffects) {
 		return [];
 	} else {
@@ -399,7 +434,7 @@ export class RaceSolverBuilder {
 	_rng: SeededRng
 	_seed: number
 	_parser: {parse: any, tokenize: any}
-	_skills: {id: string, p: Perspective, originWisdom?: number}[]
+	_skills: {id: string, p: Perspective, originWisdom?: number, level?: number}[]
 	_samplePolicyOverride: Map<string, ActivationSamplePolicy>
 	_extraSkillHooks: ((skilldata: SkillData[], horse: HorseParameters, course: CourseData) => void)[]
 	_onSkillActivate: (state: RaceSolver, skillId: string) => void
@@ -704,7 +739,7 @@ export class RaceSolverBuilder {
 					effects: [{
 						type: SkillType.TargetSpeed,
 						baseDuration: 9999.0,
-						modifier: StaminaSyoubu.calcApproximateModifier(stamina, course.distance)
+						modifier: StaminaSyoubu.calcApproximateModifier(stamina, course.distance, this._rng)
 					}]
 				});
 			}
@@ -712,8 +747,8 @@ export class RaceSolverBuilder {
 		return this;
 	}
 
-	addSkill(skillId: string, perspective: Perspective = Perspective.Self, samplePolicy?: ActivationSamplePolicy, originWisdom?: number) {
-		this._skills.push({id: skillId, p: perspective, originWisdom});
+	addSkill(skillId: string, perspective: Perspective = Perspective.Self, samplePolicy?: ActivationSamplePolicy, originWisdom?: number, level: number = 1) {
+		this._skills.push({id: skillId, p: perspective, originWisdom, level});
 		if (samplePolicy != null) {
 			this._samplePolicyOverride.set(this.getSamplePolicyKey(skillId, perspective), samplePolicy);
 		}
@@ -728,9 +763,9 @@ export class RaceSolverBuilder {
 	 * @param perspective Whether this skill is for Self or Other (default: Self)
 	 * @returns this builder for chaining
 	 */
-	addSkillAtPosition(skillId: string, position: number, perspective: Perspective = Perspective.Self, originWisdom?: number) {
+	addSkillAtPosition(skillId: string, position: number, perspective: Perspective = Perspective.Self, originWisdom?: number, level: number = 1) {
 		const { createFixedPositionPolicy } = require('./ActivationSamplePolicy');
-		return this.addSkill(skillId, perspective, createFixedPositionPolicy(position), originWisdom);
+		return this.addSkill(skillId, perspective, createFixedPositionPolicy(position), originWisdom, level);
 	}
 	
 	posKeepMode(mode: PosKeepMode) {
@@ -834,7 +869,7 @@ export class RaceSolverBuilder {
 		Object.freeze(wholeCourse);
 
 		const makeSkill = buildSkillData.bind(null, horse, this._raceParams, this._course, wholeCourse, this._parser);
-		const skilldata = this._skills.flatMap(({id,p}) => makeSkill(id, p));
+		const skilldata = this._skills.flatMap(({id,p,level}) => makeSkill(id, p, level));
 		this._extraSkillHooks.forEach(h => h(skilldata, horse, this._course));
 		const triggers = skilldata.map(sd => {
 			const key = sd.perspective != null ? this.getSamplePolicyKey(sd.skillId, sd.perspective) : sd.skillId;
