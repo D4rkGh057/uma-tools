@@ -52,6 +52,10 @@ interface UmaStaminaStats {
     hpDiedPositionStatsNonFullSpurt: PositionStats;
     nonFullSpurtVelocityStats: PositionStats;
     nonFullSpurtDelayStats: PositionStats;
+    hpDiedPositionsFullSpurt: number[];
+    hpDiedPositionsNonFullSpurt: number[];
+    nonFullSpurtVelocityDiffs: number[];
+    nonFullSpurtDelayDistances: number[];
 }
 
 interface FirstUmaStats {
@@ -247,6 +251,70 @@ function Histogram({ results, displayRun, width = 500, height = 80 }: HistogramP
     );
 }
 
+// ── PositionHistogram ────────────────────────────────────────────────────────
+
+interface PositionHistogramProps {
+    positions: number[];
+    color: 'uma1' | 'uma2';
+    unit?: string;
+    precision?: number;
+    width?: number;
+    height?: number;
+}
+
+function PositionHistogram({ positions, color, unit = 'm', precision = 0, width = 220, height = 56 }: PositionHistogramProps) {
+    if (positions.length === 0) {
+        return null;
+    }
+
+    const NUM_BINS = 20;
+    const PAD = { top: 4, bottom: 16, left: 4, right: 4 };
+    const innerW = width - PAD.left - PAD.right;
+    const innerH = height - PAD.top - PAD.bottom;
+
+    const sorted = [...positions].sort((a, b) => a - b);
+    const minVal = sorted[0];
+    const maxVal = sorted[sorted.length - 1];
+    const range = maxVal - minVal || 1;
+    const binWidth = range / NUM_BINS;
+
+    const bins = Array.from({ length: NUM_BINS }, () => 0);
+    for (const v of positions) {
+        const idx = Math.min(Math.floor((v - minVal) / binWidth), NUM_BINS - 1);
+        bins[idx]++;
+    }
+    const maxCount = Math.max(...bins, 1);
+    const barW = innerW / NUM_BINS;
+
+    return (
+        <div class="results-histogram">
+            <svg class="histogram-svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+                {bins.map((count, i) => {
+                    const x = PAD.left + i * barW;
+                    const barH = (count / maxCount) * innerH;
+                    const y = PAD.top + innerH - barH;
+                    return (
+                        <rect
+                            key={i}
+                            class={`bar-${color}`}
+                            x={x + 0.5}
+                            y={y}
+                            width={Math.max(barW - 1, 1)}
+                            height={barH}
+                        />
+                    );
+                })}
+                <text class="histogram-axis-label" x={PAD.left} y={height - 4} text-anchor="start">
+                    {minVal.toFixed(precision)}{unit}
+                </text>
+                <text class="histogram-axis-label" x={width - PAD.right} y={height - 4} text-anchor="end">
+                    {maxVal.toFixed(precision)}{unit}
+                </text>
+            </svg>
+        </div>
+    );
+}
+
 // ── UmaStatsCard ──────────────────────────────────────────────────────────────
 
 interface UmaStatsCardProps {
@@ -341,49 +409,61 @@ function UmaStatsCard({ snapshot, allruns, staminaStats, firstPlaceRate, umaInde
                         <span class="value">{firstPlaceRate.toFixed(1)}%</span>
                     </div>
                     {staminaStats.hpDiedPositionStatsNonFullSpurt.count > 0 && (
-                        <div class="stat-row">
-                            <span class="label">Failed Spurt HP Die Pos</span>
-                            <span class="value">
-                                {staminaStats.hpDiedPositionStatsNonFullSpurt.mean?.toFixed(0)}m
-                                <span class="stat-subtext">
-                                    {' '}({staminaStats.hpDiedPositionStatsNonFullSpurt.min?.toFixed(0)} – {staminaStats.hpDiedPositionStatsNonFullSpurt.max?.toFixed(0)},
-                                    {' '}{((staminaStats.hpDiedPositionStatsNonFullSpurt.count / (allruns.totalRuns || 1)) * 100).toFixed(1)}% of runs)
+                        <div class="stat-row stat-row--stacked">
+                            <div class="stat-row-header">
+                                <span class="label">Failed Spurt HP Die Pos</span>
+                                <span class="value">
+                                    {staminaStats.hpDiedPositionStatsNonFullSpurt.mean?.toFixed(0)}m
+                                    <span class="stat-subtext">
+                                        {' '}({staminaStats.hpDiedPositionStatsNonFullSpurt.min?.toFixed(0)} – {staminaStats.hpDiedPositionStatsNonFullSpurt.max?.toFixed(0)},
+                                        {' '}{((staminaStats.hpDiedPositionStatsNonFullSpurt.count / (allruns.totalRuns || 1)) * 100).toFixed(1)}% of runs)
+                                    </span>
                                 </span>
-                            </span>
+                            </div>
+                            <PositionHistogram positions={staminaStats.hpDiedPositionsNonFullSpurt} color={cls} />
                         </div>
                     )}
                     {staminaStats.hpDiedPositionStatsFullSpurt.count > 0 && (
-                        <div class="stat-row">
-                            <span class="label">Spurt HP Die Pos</span>
-                            <span class="value">
-                                {staminaStats.hpDiedPositionStatsFullSpurt.mean?.toFixed(0)}m
-                                <span class="stat-subtext">
-                                    {' '}({staminaStats.hpDiedPositionStatsFullSpurt.min?.toFixed(0)} – {staminaStats.hpDiedPositionStatsFullSpurt.max?.toFixed(0)},
-                                    {' '}{((staminaStats.hpDiedPositionStatsFullSpurt.count / (allruns.totalRuns || 1)) * 100).toFixed(1)}% of runs)
+                        <div class="stat-row stat-row--stacked">
+                            <div class="stat-row-header">
+                                <span class="label">Spurt HP Die Pos</span>
+                                <span class="value">
+                                    {staminaStats.hpDiedPositionStatsFullSpurt.mean?.toFixed(0)}m
+                                    <span class="stat-subtext">
+                                        {' '}({staminaStats.hpDiedPositionStatsFullSpurt.min?.toFixed(0)} – {staminaStats.hpDiedPositionStatsFullSpurt.max?.toFixed(0)},
+                                        {' '}{((staminaStats.hpDiedPositionStatsFullSpurt.count / (allruns.totalRuns || 1)) * 100).toFixed(1)}% of runs)
+                                    </span>
                                 </span>
-                            </span>
+                            </div>
+                            <PositionHistogram positions={staminaStats.hpDiedPositionsFullSpurt} color={cls} />
                         </div>
                     )}
                     {staminaStats.nonFullSpurtVelocityStats.count > 0 && (
-                        <div class="stat-row">
-                            <span class="label">Failed Spurt Velocity</span>
-                            <span class="value">
-                                {staminaStats.nonFullSpurtVelocityStats.mean?.toFixed(2)} m/s
-                                <span class="stat-subtext">
-                                    {' '}({staminaStats.nonFullSpurtVelocityStats.min?.toFixed(2)} – {staminaStats.nonFullSpurtVelocityStats.max?.toFixed(2)})
+                        <div class="stat-row stat-row--stacked">
+                            <div class="stat-row-header">
+                                <span class="label">Failed Spurt Velocity</span>
+                                <span class="value">
+                                    {staminaStats.nonFullSpurtVelocityStats.mean?.toFixed(2)} m/s
+                                    <span class="stat-subtext">
+                                        {' '}({staminaStats.nonFullSpurtVelocityStats.min?.toFixed(2)} – {staminaStats.nonFullSpurtVelocityStats.max?.toFixed(2)})
+                                    </span>
                                 </span>
-                            </span>
+                            </div>
+                            <PositionHistogram positions={staminaStats.nonFullSpurtVelocityDiffs} color={cls} unit=" m/s" precision={2} />
                         </div>
                     )}
                     {staminaStats.nonFullSpurtDelayStats.count > 0 && (
-                        <div class="stat-row">
-                            <span class="label">Failed Spurt Delay</span>
-                            <span class="value">
-                                {staminaStats.nonFullSpurtDelayStats.mean?.toFixed(2)}s
-                                <span class="stat-subtext">
-                                    {' '}({staminaStats.nonFullSpurtDelayStats.min?.toFixed(2)} – {staminaStats.nonFullSpurtDelayStats.max?.toFixed(2)})
+                        <div class="stat-row stat-row--stacked">
+                            <div class="stat-row-header">
+                                <span class="label">Failed Spurt Delay</span>
+                                <span class="value">
+                                    {staminaStats.nonFullSpurtDelayStats.mean?.toFixed(2)}m
+                                    <span class="stat-subtext">
+                                        {' '}({staminaStats.nonFullSpurtDelayStats.min?.toFixed(2)} – {staminaStats.nonFullSpurtDelayStats.max?.toFixed(2)})
+                                    </span>
                                 </span>
-                            </span>
+                            </div>
+                            <PositionHistogram positions={staminaStats.nonFullSpurtDelayDistances} color={cls} unit="m" precision={2} />
                         </div>
                     )}
                 </div>

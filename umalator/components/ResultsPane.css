@@ -264,6 +264,16 @@
     color: var(--rp-text-secondary);
     opacity: 0.75;
 }
+.stat-row--stacked {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+}
+.stat-row-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
 
 /* ── Race mechanics + skills + misc ─────────────────────────────────────── */
 .mechanics-section,

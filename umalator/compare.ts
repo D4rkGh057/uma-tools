@@ -560,7 +560,11 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 			hpDiedPositionStatsFullSpurt: calculateHpDiedPositionStats(staminaStats.uma1.hpDiedPositionsFullSpurt),
 			hpDiedPositionStatsNonFullSpurt: calculateHpDiedPositionStats(staminaStats.uma1.hpDiedPositionsNonFullSpurt),
 			nonFullSpurtVelocityStats: calculateHpDiedPositionStats(staminaStats.uma1.nonFullSpurtVelocityDiffs),
-			nonFullSpurtDelayStats: calculateHpDiedPositionStats(staminaStats.uma1.nonFullSpurtDelayDistances)
+			nonFullSpurtDelayStats: calculateHpDiedPositionStats(staminaStats.uma1.nonFullSpurtDelayDistances),
+			hpDiedPositionsFullSpurt: staminaStats.uma1.hpDiedPositionsFullSpurt,
+			hpDiedPositionsNonFullSpurt: staminaStats.uma1.hpDiedPositionsNonFullSpurt,
+			nonFullSpurtVelocityDiffs: staminaStats.uma1.nonFullSpurtVelocityDiffs,
+			nonFullSpurtDelayDistances: staminaStats.uma1.nonFullSpurtDelayDistances
 		},
 		uma2: {
 			staminaSurvivalRate: staminaStats.uma2.total > 0 ? ((staminaStats.uma2.total - staminaStats.uma2.hpDiedCount) / staminaStats.uma2.total * 100) : 0,
@@ -568,7 +572,11 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 			hpDiedPositionStatsFullSpurt: calculateHpDiedPositionStats(staminaStats.uma2.hpDiedPositionsFullSpurt),
 			hpDiedPositionStatsNonFullSpurt: calculateHpDiedPositionStats(staminaStats.uma2.hpDiedPositionsNonFullSpurt),
 			nonFullSpurtVelocityStats: calculateHpDiedPositionStats(staminaStats.uma2.nonFullSpurtVelocityDiffs),
-			nonFullSpurtDelayStats: calculateHpDiedPositionStats(staminaStats.uma2.nonFullSpurtDelayDistances)
+			nonFullSpurtDelayStats: calculateHpDiedPositionStats(staminaStats.uma2.nonFullSpurtDelayDistances),
+			hpDiedPositionsFullSpurt: staminaStats.uma2.hpDiedPositionsFullSpurt,
+			hpDiedPositionsNonFullSpurt: staminaStats.uma2.hpDiedPositionsNonFullSpurt,
+			nonFullSpurtVelocityDiffs: staminaStats.uma2.nonFullSpurtVelocityDiffs,
+			nonFullSpurtDelayDistances: staminaStats.uma2.nonFullSpurtDelayDistances
 		}
 	};
 	
