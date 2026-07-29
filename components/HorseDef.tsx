@@ -301,14 +301,17 @@ export function HorseDef(props) {
 
 		const removedSkillIds = state.skills.keySeq().toSet().subtract(newSkills.keySeq().toSet());
 		let newForcedPositions = state.forcedSkillPositions;
+		let newSkillLevels = state.skillLevels;
 		removedSkillIds.forEach(skillId => {
 			newForcedPositions = newForcedPositions.delete(skillId);
+			newSkillLevels = newSkillLevels.delete(skillId);
 		});
 
 		setState(
 			state.set('outfitId', id)
 				.set('skills', newSkills)
 				.set('forcedSkillPositions', newForcedPositions)
+				.set('skillLevels', newSkillLevels)
 		);
 	}
 
@@ -341,6 +344,7 @@ export function HorseDef(props) {
 			setState(
 				state.set('skills', state.skills.delete(state.skills.findKey(id => id == skillId)))
 					.set('forcedSkillPositions', state.forcedSkillPositions.delete(skillId))
+					.set('skillLevels', state.skillLevels.delete(skillId))
 			);
 		} else if (se.classList.contains('expandedSkill')) {
 			setExpanded(expanded.delete(se.dataset.skillid));
@@ -355,6 +359,15 @@ export function HorseDef(props) {
 			setState(state.set('forcedSkillPositions', state.forcedSkillPositions.delete(skillId)));
 		} else {
 			setState(state.set('forcedSkillPositions', state.forcedSkillPositions.set(skillId, numValue)));
+		}
+	}
+
+	function handleSkillLevelChange(skillId: string, value: string) {
+		const numValue = parseInt(value, 10);
+		if (value === '' || isNaN(numValue)) {
+			setState(state.set('skillLevels', state.skillLevels.delete(skillId)));
+		} else {
+			setState(state.set('skillLevels', state.skillLevels.set(skillId, Math.max(1, Math.min(10, numValue)))));
 		}
 	}
 
@@ -379,6 +392,19 @@ export function HorseDef(props) {
 		}
 	}, [state.skills]);
 
+	useEffect(function () {
+		const currentSkillIds = state.skills.valueSeq().toSet();
+		const skillLevelIds = state.skillLevels.keySeq().toSet();
+		const orphanedSkillIds = skillLevelIds.subtract(currentSkillIds);
+		if (orphanedSkillIds.size > 0) {
+			let newSkillLevels = state.skillLevels;
+			orphanedSkillIds.forEach(skillId => {
+				newSkillLevels = newSkillLevels.delete(skillId);
+			});
+			setState(state.set('skillLevels', newSkillLevels));
+		}
+	}, [state.skills]);
+
 	const hasRunawaySkill = state.skills.has('202051');
 	useEffect(function () {
 		if (hasRunawaySkill && state.strategy !== 'Oonige') {
@@ -398,13 +424,21 @@ export function HorseDef(props) {
 						  dismissable={id != u}
 						  forcedPosition={state.forcedSkillPositions.get(id) || ''}
 						  onPositionChange={(value: string) => handlePositionChange(id, value)}
+						  skillLevel={state.skillLevels.get(id)}
+						  onSkillLevelChange={(value: string) => handleSkillLevelChange(id, value)}
 						  runData={hasRunData ? props.runData : null}
 						  umaIndex={hasRunData ? props.umaIndex : null}
 						  onViewProcData={hasRunData ? () => setProcDataSkillId(id) : null}
 					  />
 				  </li>
 				: <li key={id} style="">
-					  <Skill id={id} selected={false} dismissable={id != u} />
+					  <Skill
+						  id={id}
+						  selected={false}
+						  dismissable={id != u}
+						  skillLevel={state.skillLevels.get(id)}
+						  onSkillLevelChange={(value: string) => handleSkillLevelChange(id, value)}
+					  />
 					  {state.forcedSkillPositions.has(id) && (
 						  <span class="forcedPositionLabel inline">
 							  @{state.forcedSkillPositions.get(id)}m
@@ -412,7 +446,7 @@ export function HorseDef(props) {
 					  )}
 				  </li>
 		);
-	}, [state.skills, umaId, expanded, props.courseDistance, state.forcedSkillPositions, props.runData, props.umaIndex]);
+	}, [state.skills, umaId, expanded, props.courseDistance, state.forcedSkillPositions, state.skillLevels, props.runData, props.umaIndex]);
 
 	return (
 		<div class="horseDef">

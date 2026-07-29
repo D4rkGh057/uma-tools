@@ -87,35 +87,39 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 	
 	uma1_.skills.sort(sort).forEach(id => {
 		const forcedPos = uma1.forcedSkillPositions.get(id);
+		const level = uma1.skillLevels.get(id) || 1;
 		if (forcedPos != null) {
-			standard.addSkillAtPosition(id, forcedPos, Perspective.Self);
+			standard.addSkillAtPosition(id, forcedPos, Perspective.Self, undefined, level);
 		} else {
-			standard.addSkill(id, Perspective.Self);
+			standard.addSkill(id, Perspective.Self, undefined, undefined, level);
 		}
 	});
 	uma2_.skills.sort(sort).forEach(id => {
 		const forcedPos = uma2.forcedSkillPositions.get(id);
+		const level = uma2.skillLevels.get(id) || 1;
 		if (forcedPos != null) {
-			compare.addSkillAtPosition(id, forcedPos, Perspective.Self);
+			compare.addSkillAtPosition(id, forcedPos, Perspective.Self, undefined, level);
 		} else {
-			compare.addSkill(id, Perspective.Self);
+			compare.addSkill(id, Perspective.Self, undefined, undefined, level);
 		}
 	});
 	uma1_.skills.forEach(id => {
 		const forcedPos = uma1.forcedSkillPositions.get(id);
+		const level = uma1.skillLevels.get(id) || 1;
 		if (forcedPos != null) {
-			compare.addSkillAtPosition(id, forcedPos, Perspective.Other, uma1Wisdom);
+			compare.addSkillAtPosition(id, forcedPos, Perspective.Other, uma1Wisdom, level);
 		} else {
-			compare.addSkill(id, Perspective.Other, undefined, uma1Wisdom); 
+			compare.addSkill(id, Perspective.Other, undefined, uma1Wisdom, level);
 		}
 	});
 	uma2_.skills.forEach(id => {
 		const forcedPos = uma2.forcedSkillPositions.get(id);
+		const level = uma2.skillLevels.get(id) || 1;
 		if (forcedPos != null) {
-			standard.addSkillAtPosition(id, forcedPos, Perspective.Other, uma2Wisdom);
+			standard.addSkillAtPosition(id, forcedPos, Perspective.Other, uma2Wisdom, level);
 		} else {
-			standard.addSkill(id, Perspective.Other, undefined, uma2Wisdom);
-		} 
+			standard.addSkill(id, Perspective.Other, undefined, uma2Wisdom, level);
+		}
 	});
 	if (!CC_GLOBAL) {
 		standard.withAsiwotameru().withStaminaSyoubu();

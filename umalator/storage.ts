@@ -20,6 +20,7 @@ export interface UmaState {
     mood: number;
     skills: string[];
     forcedSkillPositions: Record<string, number>;
+    skillLevels: Record<string, number>;
 }
 
 export function validateAndParseUmaJson(json: any): UmaState | null {
@@ -52,6 +53,14 @@ export function validateAndParseUmaJson(json: any): UmaState | null {
         }
     }
 
+    const skillLevels: Record<string, number> = {};
+    if (json.skillLevels && typeof json.skillLevels === 'object') {
+        for (const [skillId, lvl] of Object.entries(json.skillLevels)) {
+            const num = typeof lvl === 'number' ? lvl : parseFloat(lvl as string);
+            if (!isNaN(num)) skillLevels[skillId] = Math.max(1, Math.min(10, Math.round(num)));
+        }
+    }
+
     return {
         outfitId: typeof json.outfitId === 'string' ? json.outfitId : '',
         speed:    Math.max(1, Math.min(2000, json.speed)),
@@ -66,6 +75,7 @@ export function validateAndParseUmaJson(json: any): UmaState | null {
         mood:              json.mood,
         skills:            validSkills,
         forcedSkillPositions,
+        skillLevels,
     };
 }
 

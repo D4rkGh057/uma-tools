@@ -112,10 +112,12 @@ function runChart({skills, course, racedef, uma, pacer, options}) {
 
 	const uma_ = new HorseState(uma)
 		.set('skills', fromJS(uma.skills))
-		.set('forcedSkillPositions', ImmMap(uma.forcedSkillPositions || {}));
+		.set('forcedSkillPositions', ImmMap(uma.forcedSkillPositions || {}))
+		.set('skillLevels', ImmMap(uma.skillLevels || {}));
 	const pacer_ = pacer ? new HorseState(pacer)
 		.set('skills', fromJS(pacer.skills || []))
-		.set('forcedSkillPositions', ImmMap(pacer.forcedSkillPositions || {})) : null;
+		.set('forcedSkillPositions', ImmMap(pacer.forcedSkillPositions || {}))
+		.set('skillLevels', ImmMap(pacer.skillLevels || {})) : null;
 	postMessage({type: 'chart-progress', round: 1, total: 3});
 	let results = run1Round(25, skills, course, racedef, uma_, pacer_, options);
 	postMessage({type: 'chart', results});
@@ -143,13 +145,16 @@ function runChart({skills, course, racedef, uma, pacer, options}) {
 function runCompare({nsamples, course, racedef, uma1, uma2, pacer, options}) {
 	const uma1_ = new HorseState(uma1)
 		.set('skills', fromJS(uma1.skills))
-		.set('forcedSkillPositions', ImmMap(uma1.forcedSkillPositions || {}));
+		.set('forcedSkillPositions', ImmMap(uma1.forcedSkillPositions || {}))
+		.set('skillLevels', ImmMap(uma1.skillLevels || {}));
 	const uma2_ = new HorseState(uma2)
 		.set('skills', fromJS(uma2.skills))
-		.set('forcedSkillPositions', ImmMap(uma2.forcedSkillPositions || {}));
+		.set('forcedSkillPositions', ImmMap(uma2.forcedSkillPositions || {}))
+		.set('skillLevels', ImmMap(uma2.skillLevels || {}));
 	const pacer_ = pacer ? new HorseState(pacer)
 		.set('skills', fromJS(pacer.skills || []))
-		.set('forcedSkillPositions', ImmMap(pacer.forcedSkillPositions || {})) : null;
+		.set('forcedSkillPositions', ImmMap(pacer.forcedSkillPositions || {}))
+		.set('skillLevels', ImmMap(pacer.skillLevels || {})) : null;
 	const compareOptions = {...options, mode: 'compare'};
 	let results;
 	for (let n = Math.min(20, nsamples), mul = 6; n < nsamples; n = Math.min(n * mul, nsamples), mul = Math.max(mul - 1, 2)) {
@@ -164,11 +169,13 @@ function runCompare({nsamples, course, racedef, uma1, uma2, pacer, options}) {
 function runAdditionalSamples({skillId, nsamples, course, racedef, uma, pacer, options}) {
 	const uma_ = new HorseState(uma)
 		.set('skills', SkillSet(uma.skills))
-		.set('forcedSkillPositions', ImmMap(uma.forcedSkillPositions || {}));
+		.set('forcedSkillPositions', ImmMap(uma.forcedSkillPositions || {}))
+		.set('skillLevels', ImmMap(uma.skillLevels || {}));
 	const pacer_ = pacer ? new HorseState(pacer)
 		.set('skills', SkillSet(pacer.skills || []))
-		.set('forcedSkillPositions', ImmMap(pacer.forcedSkillPositions || {})) : null;
-	
+		.set('forcedSkillPositions', ImmMap(pacer.forcedSkillPositions || {}))
+		.set('skillLevels', ImmMap(pacer.skillLevels || {})) : null;
+
 	const newSkillGroupId = skillmeta(skillId)?.groupId;
 	let skillsToUse = uma_.skills;
 	

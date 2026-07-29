@@ -466,14 +466,17 @@ interface ExpandedSkillViewProps {
 	distanceFactor?: number;
 	forcedPosition?: string;
 	onPositionChange?: (value: string) => void;
+	skillLevel?: number;
+	onSkillLevelChange?: (value: string) => void;
 	runData?: any;
 	umaIndex?: any;
 	onViewProcData?: () => void;
 }
 
-export function ExpandedSkillView({ id, dismissable, distanceFactor, forcedPosition, onPositionChange, runData, umaIndex, onViewProcData }: ExpandedSkillViewProps) {
+export function ExpandedSkillView({ id, dismissable, distanceFactor, forcedPosition, onPositionChange, skillLevel, onSkillLevelChange, runData, umaIndex, onViewProcData }: ExpandedSkillViewProps) {
 	const skill = skilldata[id];
 	if (!skill) return null;
+	const isUnique = skill.rarity >= 3 && skill.rarity <= 5;
 
 	return (
 		<div class={`expandedSkill skill-expanded-view ${getSkillRarityClass(id)}`} data-skillid={id}>
@@ -537,6 +540,22 @@ export function ExpandedSkillView({ id, dismissable, distanceFactor, forcedPosit
 							onClick={(e) => e.stopPropagation()}
 							min="0"
 							step="10"
+						/>
+					</div>
+				)}
+				{isUnique && onSkillLevelChange && (
+					<div class="skill-detail-row skill-level">
+						<span class="skill-detail-label">Skill level:</span>
+						<input
+							type="number"
+							class="skill-level-input"
+							placeholder="1"
+							value={skillLevel ?? ''}
+							onInput={(e) => onSkillLevelChange((e.target as HTMLInputElement).value)}
+							onClick={(e) => e.stopPropagation()}
+							min="1"
+							max="10"
+							step="1"
 						/>
 					</div>
 				)}

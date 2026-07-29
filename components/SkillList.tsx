@@ -203,10 +203,29 @@ function matchRarity(id, testRarity) {
 const classnames = Object.freeze(['', 'skill-white', 'skill-gold', 'skill-unique', 'skill-unique', 'skill-unique', 'skill-pink']);
 
 export function Skill(props) {
+	const rarity = skilldata[props.id].rarity;
+	const isUnique = rarity >= 3 && rarity <= 5;
 	return (
-		<div class={`skill ${classnames[skilldata[props.id].rarity]} ${props.selected ? 'selected' : ''}`} data-skillid={props.id}>
-			<img class="skillIcon" src={`/uma-tools/icons/${skillmeta[props.id].iconId}.png`} /> 
+		<div class={`skill ${classnames[rarity]} ${props.selected ? 'selected' : ''}`} data-skillid={props.id}>
+			<img class="skillIcon" src={`/uma-tools/icons/${skillmeta[props.id].iconId}.png`} />
 			<span class="skillName"><Text id={`skillnames.${props.id}`} /></span>
+			{isUnique && props.onSkillLevelChange && (
+				<span class="skillLevelPillGroup">
+					<span class="skillLevelPillLabel">Lvl</span>
+					<input
+						type="number"
+						class="skillLevelPill"
+						title="Skill level"
+						value={props.skillLevel ?? ''}
+						placeholder="1"
+						min="1"
+						max="10"
+						step="1"
+						onClick={(e) => e.stopPropagation()}
+						onInput={(e) => props.onSkillLevelChange((e.target as HTMLInputElement).value)}
+					/>
+				</span>
+			)}
 			{props.dismissable && <span class="skillDismiss">✕</span>}
 		</div>
 	);

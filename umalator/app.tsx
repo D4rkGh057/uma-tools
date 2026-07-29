@@ -1179,13 +1179,16 @@ async function deserialize(hash) {
 					racedef: new RaceParams(o.racedef),
 					uma1: new HorseState(o.uma1)
 						.set('skills', SkillSet(o.uma1.skills))
-						.set('forcedSkillPositions', ImmMap(o.uma1.forcedSkillPositions || {})),
+						.set('forcedSkillPositions', ImmMap(o.uma1.forcedSkillPositions || {}))
+						.set('skillLevels', ImmMap(o.uma1.skillLevels || {})),
 					uma2: new HorseState(o.uma2)
 						.set('skills', SkillSet(o.uma2.skills))
-						.set('forcedSkillPositions', ImmMap(o.uma2.forcedSkillPositions || {})),
+						.set('forcedSkillPositions', ImmMap(o.uma2.forcedSkillPositions || {}))
+						.set('skillLevels', ImmMap(o.uma2.skillLevels || {})),
 					pacer: o.pacer ? new HorseState(o.pacer)
 						.set('skills', SkillSet(o.pacer.skills || []))
-						.set('forcedSkillPositions', ImmMap(o.pacer.forcedSkillPositions || {})) : new HorseState({strategy: 'Nige'}),
+						.set('forcedSkillPositions', ImmMap(o.pacer.forcedSkillPositions || {}))
+						.set('skillLevels', ImmMap(o.pacer.skillLevels || {})) : new HorseState({strategy: 'Nige'}),
 					witVarianceSettings: o.witVarianceSettings || {
 						syncRng: false,
 						skillWisdomCheck: true,
@@ -1506,6 +1509,7 @@ function horseStateToUmaState(state: HorseState): UmaState {
         mood: state.mood,
         skills: Array.from(state.skills.values()),
         forcedSkillPositions: state.forcedSkillPositions.toJS() as { [key: string]: number },
+        skillLevels: state.skillLevels.toJS() as { [key: string]: number },
     };
 }
 
@@ -1524,6 +1528,7 @@ function umaStateToHorseState(uma: UmaState): HorseState {
         mood: uma.mood as Mood,
         skills: SkillSet(uma.skills),
         forcedSkillPositions: ImmMap(uma.forcedSkillPositions),
+        skillLevels: ImmMap(uma.skillLevels),
     });
 }
 
@@ -1557,6 +1562,15 @@ function decodedUmaToUmaState(uma: DecodedUma): UmaState {
         mood: 2,
         skills: uma.skills.map(s => String(s.id)),
         forcedSkillPositions: {},
+        // only unique skills (rarity 3-5) actually have levels in-game; ignore the decoded level for white/gold skills
+        skillLevels: uma.skills.reduce((acc, s) => {
+            const id = String(s.id);
+            const rarity = skilldata[id]?.rarity;
+            if (rarity >= 3 && rarity <= 5 && s.level > 1) {
+                acc[id] = s.level;
+            }
+            return acc;
+        }, {} as { [key: string]: number }),
     };
 }
 
