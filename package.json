@@ -3,7 +3,11 @@
   "version": "0.0.1",
   "description": "",
   "main": "index.js",
-  "scripts": {},
+  "scripts": {
+    "dev:umalator": "cd umalator-global && node build.mjs --serve 8000",
+    "dev:skill-optimizer": "cd skill-optimizer-global && node build.mjs --serve 8123",
+    "dev": "(npm run dev:umalator &) && (npm run dev:skill-optimizer &)"
+  },
   "author": "pecan",
   "license": "GPL-3.0-or-later",
   "devDependencies": {
