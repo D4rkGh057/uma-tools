@@ -1479,15 +1479,19 @@ export class RaceSolver {
 		}
 	}
 
-	// deactivate any skills that haven't finished their durations yet (intended to be called at the end of a simulation, when a skill
-	// might have activated towards the end of the race and the race finished before the skill's duration)
+	private finalizeActiveSkills() {
+		[
+			this.activeTargetSpeedSkills,
+			this.activeCurrentSpeedSkills,
+			this.activeAccelSkills,
+			this.activeLaneMovementSkills,
+			this.activeChangeLaneSkills
+		].forEach(skills => skills.forEach(s => this.onSkillDeactivate(this, s.skillId, s.perspective)));
+	}
+
+	// Deactivate skills still active when a simulation reaches the finish line.
 	cleanup() {
-		const callDeactivateHook = (s: {skillId: string, perspective?: Perspective}) => { this.onSkillDeactivate(this, s.skillId, s.perspective); }
-		this.activeTargetSpeedSkills.forEach(callDeactivateHook);
-		this.activeCurrentSpeedSkills.forEach(callDeactivateHook);
-		this.activeAccelSkills.forEach(callDeactivateHook);
-		this.activeLaneMovementSkills.forEach(callDeactivateHook);
-		this.activeChangeLaneSkills.forEach(callDeactivateHook);
+		this.finalizeActiveSkills();
 	}
 
 	registerCondition(name: string, condition: ApproximateCondition): void {
