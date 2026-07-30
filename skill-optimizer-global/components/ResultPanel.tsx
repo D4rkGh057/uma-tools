@@ -13,10 +13,11 @@ import { useMemo, useState } from 'preact/hooks';
 
 import { chainCost } from '../optimizer/cost';
 import { isSkillImpossibleForRace } from '../optimizer/conditions';
+import { candidateGroupIds } from '../optimizer/optimize';
 import { buildProbes } from '../optimizer/probes';
-import { effectMagnitude, rawFit } from '../optimizer/score';
+import { effectMagnitude, isSituationalSkill, rawFit, scoringContext } from '../optimizer/score';
 import { skillGroups } from '../optimizer/skillGroups';
-import { DistanceBucket, OptimizeInput, Plan, RaceProbes } from '../optimizer/types';
+import { OptimizeInput, Plan, RaceProbes } from '../optimizer/types';
 import { ownedTiersFromSkills } from './UmaSelect';
 
 import skillnames from '../../uma-skill-tools/data/skillnames.json';
@@ -28,7 +29,6 @@ function getSkillName(skillId: string): string {
 // Mirrors optimize.ts's own defaults exactly so displayed scores match `plan` for any picked
 // candidate -- see file header.
 const DEFAULT_BLEND_WEIGHT = 0.5;
-const DEFAULT_BUCKET: DistanceBucket = 'Short';
 
 interface CandidateBreakdown {
 	skillId: string;
@@ -67,9 +67,9 @@ function normalize(v: number, range: { min: number; max: number }): number {
 function buildBreakdown(input: OptimizeInput, plan: Plan): GroupBreakdown[] {
 	const { ownedSkills, hints, raceContext, blendWeight = DEFAULT_BLEND_WEIGHT } = input;
 	const probes: RaceProbes | null = buildProbes(raceContext);
+	const ctx = scoringContext(probes);
 	const ownedIdxByGroup = ownedTiersFromSkills(ownedSkills);
-	const groupIds = Array.from(skillGroups.keys());
-	const bucket = probes ? probes.distanceBucket : DEFAULT_BUCKET;
+	const groupIds = candidateGroupIds(hints);
 
 	interface Raw {
 		groupId: string; targetIdx: number; skillId: string;
@@ -82,10 +82,13 @@ function buildBreakdown(input: OptimizeInput, plan: Plan): GroupBreakdown[] {
 		const rows: Raw[] = [];
 		for (let targetIdx = ownedIdx + 1; targetIdx < tiers.length; targetIdx++) {
 			const skillId = tiers[targetIdx];
+			// Positioning skills never enter scoring/ranking -- skip the row entirely, they're shown in
+			// the separate "Situational (not scored)" table below instead (mirrors optimize.ts).
+			if (isSituationalSkill(skillId)) continue;
 			const excluded = probes != null && isSkillImpossibleForRace(skillId, probes.conflictFacts);
 			const { cost } = chainCost(groupId, ownedIdx, targetIdx, hints);
 			const fit = excluded ? 0 : rawFit(skillId, probes);
-			const magnitude = excluded ? 0 : effectMagnitude(skillId, bucket, probes == null);
+			const magnitude = excluded ? 0 : effectMagnitude(skillId, ctx);
 			rows.push({ groupId, targetIdx, skillId, cost, fit, magnitude, excluded });
 		}
 		return rows;
@@ -107,7 +110,7 @@ function buildBreakdown(input: OptimizeInput, plan: Plan): GroupBreakdown[] {
 		const ownedIdx = ownedIdxByGroup.get(groupId) ?? -1;
 		const ownedSkillId = ownedIdx >= 0 ? tiers[ownedIdx] : null;
 		const baselineScore = ownedIdx >= 0
-			? combinedScore(rawFit(tiers[ownedIdx], probes), effectMagnitude(tiers[ownedIdx], bucket, probes == null), 0)
+			? combinedScore(rawFit(tiers[ownedIdx], probes), effectMagnitude(tiers[ownedIdx], ctx), 0)
 			: 0;
 
 		const candidates: CandidateBreakdown[] = rawByGroup[gi].map(c => {
@@ -169,6 +172,24 @@ export function ResultPanel({ input, plan }: ResultPanelProps) {
 						))}
 					</tbody>
 				</table>
+			)}
+
+			{plan.situational.length > 0 && (
+				<div class="result-situational">
+					<div class="result-situational-header">Situational (not scored)</div>
+					<table class="result-situational-table">
+						<thead><tr><th>Skill</th><th>Cost</th><th>Reason</th></tr></thead>
+						<tbody>
+							{plan.situational.map(s => (
+								<tr key={`${s.groupId}-${s.skillId}`}>
+									<td>{getSkillName(s.skillId)}</td>
+									<td>{s.cost}</td>
+									<td>{s.reason}</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</div>
 			)}
 
 			<button type="button" class="result-breakdown-toggle" onClick={() => setShowBreakdown(v => !v)}>

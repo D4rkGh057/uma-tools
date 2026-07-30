@@ -38,10 +38,34 @@ export interface RaceProbes {
 	/** Known race facts used for structural conflict / hard-exclusion checks (conditions.ts). */
 	conflictFacts: RaceFact[];
 	distanceBucket: DistanceBucket;
+	/** Real course distance in meters, always populated (exact when derivable, otherwise the
+	 *  per-bucket representative fallback -- see probes.ts BUCKET_DISTANCES). Feeds the
+	 *  duration-and-distance-aware magnitude formula in score.ts. */
+	raceDistance: number;
 }
 
 /** Manual hint level (0-5) per candidate skill-tier id, keyed by the tier's skill id string. */
 export type HintInput = Record<string, number>;
+
+/**
+ * Optional build stats for the uma being optimized, used to project a pre-purchase HP deficit for
+ * Recovery (type 9) scoring (spec domain: "Recovery Effect Magnitude via Projected HP Deficit").
+ * Every field is optional -- `speed`/`guts`/`distanceAptitude` fall back to documented defaults
+ * (design decision #7) when omitted, while `stamina`/`strategy` (plus a resolvable race distance) are
+ * required to enable HP-projection mode at all; scoringContext() falls back to the flat Recovery
+ * weight otherwise (spec: "Graceful Degradation When Build Inputs Are Incomplete").
+ */
+export interface UmaBuild {
+	speed?: number;
+	stamina?: number;
+	power?: number;
+	guts?: number;
+	wisdom?: number;
+	/** Strategy enum from uma-skill-tools/HorseTypes.ts (1=Nige,2=Senkou,3=Sasi,4=Oikomi,5=Oonige). */
+	strategy?: 1 | 2 | 3 | 4 | 5;
+	/** 0=S,1=A,2=B,3=C,4=D,5=E,6=F,7=G -- matches uma-skill-tools/HorseTypes.ts's Aptitude enum. */
+	distanceAptitude?: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+}
 
 /** A single unpurchased tier step inside a groupId chain, with its own per-step hint discount. */
 export interface ChainStep {
@@ -66,10 +90,22 @@ export interface GroupOption {
 	steps: ChainStep[];
 }
 
+/** A Positioning-type (SkillType.ChangeLane, id 35) skill excluded from the blended score and
+ *  ranked picks, surfaced separately instead of hidden or given a default weight (spec:
+ *  "Positioning Skills Excluded From Blended Score, Shown Separately"). */
+export interface SituationalSkill {
+	groupId: string;
+	skillId: string;
+	cost: number;
+	reason: string;
+}
+
 export interface Plan {
 	totalCost: number;
 	totalScore: number;
 	picks: GroupOption[];
+	/** Positioning-type candidates that were excluded from scoring/ranking -- see SituationalSkill. */
+	situational: SituationalSkill[];
 }
 
 export interface OptimizeInput {
@@ -82,4 +118,8 @@ export interface OptimizeInput {
 	raceContext?: RaceContext;
 	/** 0-1 blend weight between condition-fit (1.0) and cost-per-effect-magnitude (0.0). Defaults to 0.5. */
 	blendWeight?: number;
+	/** Uma's own build stats, enabling HP-projection Recovery scoring when complete enough (see
+	 *  UmaBuild). Also improves condition-fit matching: optimize() falls back to build.strategy for
+	 *  raceContext.style when raceContext.style itself is unset. */
+	build?: UmaBuild;
 }

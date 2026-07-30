@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url';
 
 import { program, Option } from 'commander';
 
+import { makeRedirectData, makeMockAssert } from './esbuild-plugins.mjs';
+
 program
 	.option('--debug')
 	.addOption(new Option('--serve [port]', 'run development server on [port]').preset(8000).implies({debug: true}));
@@ -20,43 +22,8 @@ const dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(dirname, '..', '..');
 const datadir = path.join(dirname, '..', 'umalator-global');
 
-const redirectData = {
-	name: 'redirectData',
-	setup(build) {
-		// NOTE: this must match `data/` imports at every depth reachable from this bundle:
-		//   - `app.tsx`'s own imports:                 `../uma-skill-tools/data/...`      (1 level)
-		//   - `optimizer/*.ts`'s imports (one dir deeper): `../../uma-skill-tools/data/...` (2 levels)
-		//   - `uma-skill-tools/CourseData.ts` and `RaceSolverBuilder.ts`'s *own* same-directory
-		//     imports (reachable transitively via ActivationConditions.ts -> CourseData.ts):
-		//     `./data/...` (0 levels, bare `./`, no `uma-skill-tools/` segment)
-		// `(?:\.\.?\/)+` matches one-or-more leading `./` or `../` segments (in any mix), so
-		// all three depths redirect to the GLOBAL dataset. There is only one `data/` directory
-		// in the whole repo (`uma-skill-tools/data`), so this cannot over-match an unrelated dir.
-		build.onResolve({filter: /^(?:\.\.?\/)+(?:uma-skill-tools\/)?data\//}, args => ({
-			path: path.join(datadir, args.path.split('/data/')[1])
-		}));
-		build.onResolve({filter: /skill_meta.json$/}, args => ({
-			path: path.join(datadir, 'skill_meta.json')
-		}));
-		build.onResolve({filter: /umas.json$/}, args => ({
-			path: path.join(datadir, 'umas.json')
-		}));
-	}
-};
-
-const mockAssertFn = debug ? 'console.assert' : 'function(){}';
-const mockAssert = {
-	name: 'mockAssert',
-	setup(build) {
-		build.onResolve({filter: /^node:assert$/}, args => ({
-			path: args.path, namespace: 'mockAssert-ns'
-		}));
-		build.onLoad({filter: /.*/, namespace: 'mockAssert-ns'}, () => ({
-			contents: 'module.exports={strict:'+mockAssertFn+'};',
-			loader: 'js'
-		}));
-	}
-};
+const redirectData = makeRedirectData(datadir);
+const mockAssert = makeMockAssert(debug);
 
 const buildOptions = {
 	entryPoints: [{in: 'app.tsx', out: 'bundle'}],

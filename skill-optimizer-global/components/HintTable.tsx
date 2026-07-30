@@ -47,7 +47,7 @@ export function HintTable({ hints, onChange }: HintTableProps) {
 
 	return (
 		<div class="hint-table">
-			{rows.length === 0 && <div class="hint-table-empty">No hint levels set -- all candidates default to hint 0.</div>}
+			{rows.length === 0 && <div class="hint-table-empty">No hint levels set -- add a skill hint to include it as a candidate.</div>}
 			{rows.length > 0 && (
 				<table class="hint-table-rows">
 					<thead>

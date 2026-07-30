@@ -3,13 +3,12 @@
 import { chainCost } from './cost';
 import { isSkillImpossibleForRace } from './conditions';
 import { buildProbes } from './probes';
-import { effectMagnitude, rawFit } from './score';
+import { effectMagnitude, isSituationalSkill, rawFit, scoringContext, ScoringContext } from './score';
 import { skillGroups, skillMeta } from './skillGroups';
 import { solve } from './knapsack';
-import { DistanceBucket, GroupOption, HintInput, OptimizeInput, Plan, RaceProbes } from './types';
+import { GroupOption, HintInput, OptimizeInput, Plan, RaceProbes, SituationalSkill } from './types';
 
 const DEFAULT_BLEND_WEIGHT = 0.5;
-const DEFAULT_BUCKET: DistanceBucket = 'Short';
 
 function ownedIndexByGroup(ownedSkills: Array<{ id: number; level: number }>): Map<string, number> {
 	const owned = new Map<string, number>();
@@ -26,6 +25,17 @@ function ownedIndexByGroup(ownedSkills: Array<{ id: number; level: number }>): M
 		if (idx > best) owned.set(groupId, idx);
 	}
 	return owned;
+}
+
+/** Skill groups the optimizer considers as candidates: only groups with at least one tier the user
+ *  has entered a hint level for (a hinted group is still walked from its owned tier upward -- unhinted
+ *  intermediate steps in the chain default to hint 0 via chainCost, same as before). Exported so
+ *  ResultPanel.tsx's dev breakdown can mirror the exact same candidate pool `optimize()` evaluates. */
+export function candidateGroupIds(hints: HintInput): string[] {
+	const hintedSkillIds = new Set(Object.keys(hints));
+	return Array.from(skillGroups.keys()).filter(groupId =>
+		skillGroups.get(groupId)!.some(skillId => hintedSkillIds.has(skillId))
+	);
 }
 
 function minMax(values: number[]): { min: number; max: number } {
@@ -58,14 +68,14 @@ function scoreTier(
 	fromIdx: number,
 	targetIdx: number,
 	hints: HintInput,
-	probes: RaceProbes | null
+	probes: RaceProbes | null,
+	ctx: ScoringContext
 ): TierScoring {
 	const tiers = skillGroups.get(groupId)!;
 	const skillId = tiers[targetIdx];
 	const { cost } = chainCost(groupId, fromIdx, targetIdx, hints);
 	const fit = rawFit(skillId, probes);
-	const bucket = probes ? probes.distanceBucket : DEFAULT_BUCKET;
-	const magnitude = effectMagnitude(skillId, bucket, probes == null);
+	const magnitude = effectMagnitude(skillId, ctx);
 	return { cost, fit, magnitude };
 }
 
@@ -89,10 +99,19 @@ function valueOf(t: TierScoring): number {
  * marginal basis as every candidate.
  */
 export function optimize(input: OptimizeInput): Plan {
-	const { ownedSkills, budget, hints, raceContext, blendWeight = DEFAULT_BLEND_WEIGHT } = input;
-	const probes = buildProbes(raceContext);
+	const { ownedSkills, budget, hints, raceContext, blendWeight = DEFAULT_BLEND_WEIGHT, build } = input;
+	// The uma's own strategy also improves condition-fit matching when no explicit raceContext.style
+	// was given -- an explicit raceContext.style always wins (design's Data Flow diagram). Critically,
+	// this fallback must ONLY apply once the user has already opted into target-race mode by setting
+	// SOME raceContext -- it must never by itself promote a "no race context at all" (generic mode)
+	// input into target-race mode, since build.strategy is populated by default on both the manual-entry
+	// and roster-import paths (see sdd/manual-uma-recovery-scoring verify finding #5).
+	const effectiveRaceContext =
+		raceContext != null ? { ...raceContext, style: raceContext.style ?? build?.strategy } : raceContext;
+	const probes = buildProbes(effectiveRaceContext);
+	const ctx = scoringContext(probes, build);
 	const ownedIdxByGroup = ownedIndexByGroup(ownedSkills);
-	const groupIds = Array.from(skillGroups.keys());
+	const groupIds = candidateGroupIds(hints);
 
 	interface RawCandidate {
 		groupId: string;
@@ -102,6 +121,11 @@ export function optimize(input: OptimizeInput): Plan {
 		scoring: TierScoring;
 	}
 
+	// Positioning-type candidates (SkillType.ChangeLane) never enter scoring/ranking at all -- they
+	// are collected here and returned separately on Plan.situational (spec: "Positioning Skills
+	// Excluded From Blended Score, Shown Separately").
+	const situational: SituationalSkill[] = [];
+
 	const rawByGroup: RawCandidate[][] = groupIds.map(groupId => {
 		const tiers = skillGroups.get(groupId)!;
 		const ownedIdx = ownedIdxByGroup.get(groupId) ?? -1;
@@ -109,7 +133,17 @@ export function optimize(input: OptimizeInput): Plan {
 		for (let targetIdx = ownedIdx + 1; targetIdx < tiers.length; targetIdx++) {
 			const skillId = tiers[targetIdx];
 			if (probes && isSkillImpossibleForRace(skillId, probes.conflictFacts)) continue;
-			const scoring = scoreTier(groupId, ownedIdx, targetIdx, hints, probes);
+			if (isSituationalSkill(skillId)) {
+				const { cost } = chainCost(groupId, ownedIdx, targetIdx, hints);
+				situational.push({
+					groupId,
+					skillId,
+					cost,
+					reason: 'Positioning skill -- excluded from blended score, shown separately',
+				});
+				continue;
+			}
+			const scoring = scoreTier(groupId, ownedIdx, targetIdx, hints, probes, ctx);
 			candidates.push({ groupId, targetIdx, skillId, cost: scoring.cost, scoring });
 		}
 		return candidates;
@@ -132,7 +166,7 @@ export function optimize(input: OptimizeInput): Plan {
 		const ownedSkillId = ownedIdx >= 0 ? tiers[ownedIdx] : '';
 
 		const baselineScore =
-			ownedIdx >= 0 ? combinedScore(scoreTier(groupId, ownedIdx, ownedIdx, hints, probes)) : 0;
+			ownedIdx >= 0 ? combinedScore(scoreTier(groupId, ownedIdx, ownedIdx, hints, probes, ctx)) : 0;
 
 		const noop: GroupOption = { groupId, targetIdx: ownedIdx, skillId: ownedSkillId, cost: 0, score: 0, steps: [] };
 		const groupOptions: GroupOption[] = [noop];
@@ -146,5 +180,5 @@ export function optimize(input: OptimizeInput): Plan {
 	});
 
 	const result = solve(options, budget);
-	return { totalCost: result.totalCost, totalScore: result.totalScore, picks: result.picks };
+	return { totalCost: result.totalCost, totalScore: result.totalScore, picks: result.picks, situational };
 }

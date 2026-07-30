@@ -4,6 +4,10 @@
 import { h } from 'preact';
 
 import { RaceContext } from '../optimizer/types';
+import { TrackSelect } from '../../components/RaceTrack';
+
+// Matches skill-visualizer-global's own default course pick, for consistency.
+const DEFAULT_COURSE_ID = 10903;
 
 export interface BudgetRaceInputsValue {
 	budget: number;
@@ -89,12 +93,10 @@ export function BudgetRaceInputs({ value, onChange }: BudgetRaceInputsProps) {
 			{hasRaceContext && (
 				<div class="race-context-fields">
 					<label>
-						<span>Track ID</span>
-						<input
-							type="number"
-							placeholder="e.g. 10101 (optional)"
-							value={value.raceContext?.trackId ?? ''}
-							onInput={e => patchRaceContext({ trackId: numOrUndefined((e.target as HTMLInputElement).value) })}
+						<span>Track</span>
+						<TrackSelect
+							courseid={value.raceContext?.trackId ?? DEFAULT_COURSE_ID}
+							setCourseid={(courseId: number) => patchRaceContext({ trackId: courseId })}
 						/>
 					</label>
 					<label>

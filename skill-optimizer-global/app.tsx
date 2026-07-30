@@ -3,36 +3,43 @@ import { useMemo, useState } from 'preact/hooks';
 
 import './app.css';
 
-import { UmaSelect, UmaSelection } from './components/UmaSelect';
+import { UmaSelect } from './components/UmaSelect';
+import { UmaInput } from './components/umaInput';
 import { BudgetRaceInputs, BudgetRaceInputsValue } from './components/BudgetRaceInputs';
 import { HintTable } from './components/HintTable';
 import { ResultPanel } from './components/ResultPanel';
 import { optimize } from './optimizer/optimize';
 import { HintInput, OptimizeInput, Plan } from './optimizer/types';
 
-// PR4 scope (sdd/skill-optimizer/tasks Phase 4): wire the input panels' state into
-// `optimizer/optimize.ts`'s `OptimizeInput` and render the result via `ResultPanel`.
+// Wires the input panels' state into `optimizer/optimize.ts`'s `OptimizeInput` and renders the result
+// via `ResultPanel`. `selection` converges both the roster-import and manual-entry paths into one
+// `UmaInput` shape (spec domain: manual-uma-entry, "Single Converged Uma Shape, No Silent Merge") --
+// see components/UmaSelect.tsx / components/umaInput.ts.
 function App() {
-	const [selection, setSelection] = useState<UmaSelection | null>(null);
+	const [selection, setSelection] = useState<UmaInput | null>(null);
 	const [budgetRace, setBudgetRace] = useState<BudgetRaceInputsValue>({ budget: 0 });
 	const [hints, setHints] = useState<HintInput>({});
+	const [plan, setPlan] = useState<Plan | null>(null);
 
-	// `selection.uma.skills` is exactly the shape `OptimizeInput.ownedSkills` expects (design decision
-	// #7 precedent, confirmed by PR3's UmaSelect.tsx) -- passed straight through, no reshaping.
+	// `selection.ownedSkills` is exactly the shape `OptimizeInput.ownedSkills` expects (design decision
+	// #7 precedent) -- passed straight through, no reshaping. `selection.build` enables HP-projection
+	// Recovery scoring (see optimizer/score.ts, optimizer/hp.ts) whenever it's complete enough.
 	const optimizeInput: OptimizeInput | null = useMemo(() => {
 		if (!selection) return null;
 		return {
-			ownedSkills: selection.uma.skills,
+			ownedSkills: selection.ownedSkills,
 			budget: budgetRace.budget,
 			hints,
 			raceContext: budgetRace.raceContext,
+			build: selection.build,
 		};
 	}, [selection, budgetRace, hints]);
 
-	const plan: Plan | null = useMemo(
-		() => (optimizeInput ? optimize(optimizeInput) : null),
-		[optimizeInput]
-	);
+	// Only recomputed on explicit "Optimize build" click, not on every input change -- avoids running
+	// the optimizer on each keystroke and lets `plan` stay a plain user-triggered snapshot.
+	function runOptimize() {
+		setPlan(optimizeInput ? optimize(optimizeInput) : null);
+	}
 
 	return (
 		<div id="skillOptimizer">
@@ -51,6 +58,9 @@ function App() {
 			</section>
 			<section class="optimizer-section">
 				<h2>4. Result</h2>
+				<button type="button" disabled={!optimizeInput} onClick={runOptimize}>
+					Optimize build
+				</button>
 				<ResultPanel input={optimizeInput} plan={plan} />
 			</section>
 		</div>

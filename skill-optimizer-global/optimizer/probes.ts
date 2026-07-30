@@ -6,6 +6,9 @@ import { DistanceBucket, RaceContext, RaceFact, RaceProbes } from './types';
 interface CourseEntry {
 	distanceType: 1 | 2 | 3 | 4;
 	surface: 1 | 2;
+	/** Exact course distance in meters (verified present in umalator-global/course_data.json, the
+	 *  dataset this bundle actually redirects to -- build.mjs's redirectData plugin). */
+	distance: number;
 }
 
 const courses = courseData as unknown as Record<string, CourseEntry>;
@@ -18,6 +21,12 @@ const BUCKET_NAMES: Record<1 | 2 | 3 | 4, DistanceBucket> = { 1: 'Short', 2: 'Mi
  *  same "no stamina boost" baseline as the acceleration-favoring default (obs #66). */
 const FALLBACK_BUCKET: DistanceBucket = 'Short';
 
+/** Representative meters per bucket, used whenever the exact course distance can't be derived (spec:
+ *  "Distance Fallback When Exact Race Distance Is Unavailable"). Mid's value doubles as the
+ *  generic-mode distance in score.ts (GENERIC_DISTANCE) since Mid is the bucket with no weight
+ *  adjustment. */
+const BUCKET_DISTANCES: Record<DistanceBucket, number> = { Short: 1200, Mile: 1600, Mid: 2000, Long: 3000 };
+
 /**
  * Builds race probes for target-race mode. Returns null when no race context is given at all --
  * callers use that to select generic mode (spec: "No target race set").
@@ -27,11 +36,16 @@ export function buildProbes(ctx?: RaceContext): RaceProbes | null {
 
 	let distanceType = ctx.distanceType;
 	let surface = ctx.surface;
-	if (distanceType == null && ctx.trackId != null) {
+	let exactDistance: number | undefined;
+	// Run the trackId lookup whenever trackId is set (not only when distanceType is still unknown) so
+	// the exact course distance can be captured even when distanceType/surface were already supplied
+	// explicitly. An explicit ctx.distanceType/ctx.surface still wins over the looked-up values.
+	if (ctx.trackId != null) {
 		const course = courses[String(ctx.trackId)];
 		if (course) {
-			distanceType = course.distanceType;
+			if (distanceType == null) distanceType = course.distanceType;
 			if (surface == null) surface = course.surface;
+			exactDistance = course.distance;
 		}
 	}
 
@@ -56,9 +70,14 @@ export function buildProbes(ctx?: RaceContext): RaceProbes | null {
 		matchProbes.push(C(`phase==${ctx.phase}`));
 	}
 
+	const distanceBucket = distanceType != null ? BUCKET_NAMES[distanceType] : FALLBACK_BUCKET;
+
 	return {
 		matchProbes,
 		conflictFacts,
-		distanceBucket: distanceType != null ? BUCKET_NAMES[distanceType] : FALLBACK_BUCKET,
+		distanceBucket,
+		// Exact meters when derivable, otherwise the per-bucket representative fallback -- never
+		// missing or zero (spec: "Distance Fallback When Exact Race Distance Is Unavailable").
+		raceDistance: exactDistance ?? BUCKET_DISTANCES[distanceBucket],
 	};
 }
