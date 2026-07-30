@@ -10,40 +10,21 @@ import { Stat, AptitudeSelect, StrategySelect } from '../../components/HorseStat
 import { SkillPickerModal } from '../../components/SkillPicker';
 import { skillGroups } from '../optimizer/skillGroups';
 import { clampStat, fromManualForm, ManualForm, UmaInput } from './umaInput';
+import { ManualUmaState, defaultOptimizerBuildState } from '../optimizerBuildStorage';
 
 export interface ManualUmaEntryProps {
-	onChange: (input: UmaInput) => void;
+	initialState: ManualUmaState;
+	onChange: (state: ManualUmaState, input: UmaInput) => void;
 }
 
-interface LocalState {
-	speed?: number;
-	stamina?: number;
-	power?: number;
-	guts?: number;
-	wisdom?: number;
-	strategy: ManualForm['strategy'];
-	distanceAptitude: string;
+interface LocalState extends ManualUmaState {
 	// Collected for field parity with roster import (spec: "Field Parity With Roster Data" lists all
 	// three aptitudes) but NOT part of UmaBuild/ManualForm -- only distanceAptitude feeds the HP
 	// projection / condition-fit matching (design's "Optional build fields").
-	surfaceAptitude: string;
-	strategyAptitude: string;
-	ownedSkills: Array<{ id: number; level: number }>;
 }
 
 function initialState(): LocalState {
-	return {
-		speed: undefined,
-		stamina: undefined,
-		power: undefined,
-		guts: undefined,
-		wisdom: undefined,
-		strategy: 'Senkou',
-		distanceAptitude: 'A',
-		surfaceAptitude: 'A',
-		strategyAptitude: 'A',
-		ownedSkills: [],
-	};
+	return defaultOptimizerBuildState().manualUma;
 }
 
 function toManualForm(state: LocalState): ManualForm {
@@ -60,8 +41,8 @@ function toManualForm(state: LocalState): ManualForm {
 	};
 }
 
-export function ManualUmaEntry({ onChange }: ManualUmaEntryProps) {
-	const [state, setState] = useState<LocalState>(initialState);
+export function ManualUmaEntry({ initialState: savedState, onChange }: ManualUmaEntryProps) {
+	const [state, setState] = useState<LocalState>(() => ({ ...initialState(), ...savedState, ownedSkills: [...savedState.ownedSkills] }));
 	const [pickerOpen, setPickerOpen] = useState(false);
 
 	const candidateSkillIds = useMemo(() => Array.from(skillGroups.values()).flat(), []);
@@ -69,13 +50,13 @@ export function ManualUmaEntry({ onChange }: ManualUmaEntryProps) {
 	function commit(patch: Partial<LocalState>) {
 		const next = { ...state, ...patch };
 		setState(next);
-		onChange(fromManualForm(toManualForm(next)));
+		onChange(next, fromManualForm(toManualForm(next)));
 	}
 
 	// Notify the parent once on mount too, so selecting "Enter manually" immediately produces a
 	// (mostly-empty) UmaInput rather than leaving app.tsx's selection stuck at the previous value.
 	useEffect(() => {
-		onChange(fromManualForm(toManualForm(state)));
+		onChange(state, fromManualForm(toManualForm(state)));
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 

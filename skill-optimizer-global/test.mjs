@@ -19,9 +19,9 @@ const outdir = path.join(dirname, '.test-bundle');
 // Every *.test.ts suite in the pure optimizer/components pipeline. Add new suites here.
 const entryPoints = [
 	path.join(dirname, 'optimizer', 'score.test.ts'),
-	path.join(dirname, 'optimizer', 'skillGroups.test.ts'),
 	path.join(dirname, 'optimizer', 'hp.test.ts'),
 	path.join(dirname, 'components', 'umaInput.test.ts'),
+	path.join(dirname, 'optimizerBuildStorage.test.ts'),
 ];
 
 await esbuild.build({

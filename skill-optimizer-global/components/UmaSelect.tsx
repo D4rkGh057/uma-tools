@@ -9,6 +9,7 @@ import { decodeRoster, loadRoster, DecodedUma } from '../../umalator/rosterDecod
 
 import { ManualUmaEntry } from './ManualUmaEntry';
 import { fromDecodedUma, ownedTiersFromSkills, UmaInput } from './umaInput';
+import { EntryMode, ManualUmaState } from '../optimizerBuildStorage';
 
 import umas from '../../umas.json';
 import icons from '../../icons.json';
@@ -40,12 +41,13 @@ function getCharIcon(cardId: number): string {
 
 export interface UmaSelectProps {
 	onSelect: (input: UmaInput | null) => void;
+	entryMode: EntryMode;
+	manualState: ManualUmaState;
+	onEntryModeChange: (mode: EntryMode) => void;
+	onManualChange: (state: ManualUmaState, input: UmaInput) => void;
 }
 
-type EntryPath = 'roster' | 'manual';
-
-export function UmaSelect({ onSelect }: UmaSelectProps) {
-	const [path, setPath] = useState<EntryPath>('roster');
+export function UmaSelect({ onSelect, entryMode: path, manualState, onEntryModeChange, onManualChange }: UmaSelectProps) {
 
 	const [roster, setRoster] = useState<DecodedUma[]>(() => []);
 	const [selectedIdx, setSelectedIdx] = useState(-1);
@@ -69,12 +71,11 @@ export function UmaSelect({ onSelect }: UmaSelectProps) {
 		})();
 	}, []);
 
-	// Switching path discards the other path's data first, never merges it (spec: "Single Converged Uma
-	// Shape, No Silent Merge"). The roster side resets its own selection here; the manual side's local
-	// state is discarded for free by unmounting <ManualUmaEntry> below (conditional rendering).
-	function switchPath(next: EntryPath) {
+	// Switching paths clears only the active selection. Manual inputs remain available for a later
+	// switch back, while roster data remains owned by the shared roster storage.
+	function switchPath(next: EntryMode) {
 		if (next === path) return;
-		setPath(next);
+		onEntryModeChange(next);
 		setSelectedIdx(-1);
 		onSelect(null);
 	}
@@ -165,7 +166,7 @@ export function UmaSelect({ onSelect }: UmaSelectProps) {
 				</div>
 			)}
 
-			{path === 'manual' && <ManualUmaEntry onChange={onSelect} />}
+			{path === 'manual' && <ManualUmaEntry initialState={manualState} onChange={onManualChange} />}
 		</div>
 	);
 }

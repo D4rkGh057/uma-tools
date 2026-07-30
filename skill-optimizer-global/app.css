@@ -5,6 +5,17 @@
 	font-family: sans-serif;
 }
 
+.optimizer-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1em;
+}
+
+.optimizer-reset {
+	white-space: nowrap;
+}
+
 .optimizer-section {
 	margin-bottom: 1.5em;
 	padding: 0.75em 1em;

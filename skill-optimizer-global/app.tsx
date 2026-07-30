@@ -1,5 +1,5 @@
 import { h, render } from 'preact';
-import { useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 
 import './app.css';
 
@@ -10,16 +10,30 @@ import { HintTable } from './components/HintTable';
 import { ResultPanel } from './components/ResultPanel';
 import { optimize } from './optimizer/optimize';
 import { HintInput, OptimizeInput, Plan } from './optimizer/types';
+import { clearOptimizerBuild, defaultOptimizerBuildState, EntryMode, loadOptimizerBuild, ManualUmaState, saveOptimizerBuild } from './optimizerBuildStorage';
 
 // Wires the input panels' state into `optimizer/optimize.ts`'s `OptimizeInput` and renders the result
 // via `ResultPanel`. `selection` converges both the roster-import and manual-entry paths into one
 // `UmaInput` shape (spec domain: manual-uma-entry, "Single Converged Uma Shape, No Silent Merge") --
 // see components/UmaSelect.tsx / components/umaInput.ts.
 function App() {
+	const initialBuild = useMemo(loadOptimizerBuild, []);
 	const [selection, setSelection] = useState<UmaInput | null>(null);
-	const [budgetRace, setBudgetRace] = useState<BudgetRaceInputsValue>({ budget: 0 });
-	const [hints, setHints] = useState<HintInput>({});
+	const [entryMode, setEntryMode] = useState<EntryMode>(initialBuild.entryMode);
+	const [manualState, setManualState] = useState<ManualUmaState>(initialBuild.manualUma);
+	const [budgetRace, setBudgetRace] = useState<BudgetRaceInputsValue>({ budget: initialBuild.budget, raceContext: initialBuild.raceContext });
+	const [hints, setHints] = useState<HintInput>(initialBuild.hints);
 	const [plan, setPlan] = useState<Plan | null>(null);
+	const [resetKey, setResetKey] = useState(0);
+	const skipNextPersistence = useRef(false);
+
+	useEffect(() => {
+		if (skipNextPersistence.current) {
+			skipNextPersistence.current = false;
+			return;
+		}
+		saveOptimizerBuild({ entryMode, manualUma: manualState, budget: budgetRace.budget, raceContext: budgetRace.raceContext, hints });
+	}, [entryMode, manualState, budgetRace, hints]);
 
 	// `selection.ownedSkills` is exactly the shape `OptimizeInput.ownedSkills` expects (design decision
 	// #7 precedent) -- passed straight through, no reshaping. `selection.build` enables HP-projection
@@ -41,12 +55,42 @@ function App() {
 		setPlan(optimizeInput ? optimize(optimizeInput) : null);
 	}
 
+	function resetBuild() {
+		if (typeof window !== 'undefined' && !window.confirm('Reset this optimizer build? Your shared roster will not be changed.')) return;
+		clearOptimizerBuild();
+		const defaults = defaultOptimizerBuildState();
+		// Effects only run when a dependency changes. Avoid leaving the skip flag armed when a
+		// reset is clicked while this build is already at its defaults.
+		skipNextPersistence.current = entryMode !== defaults.entryMode
+			|| JSON.stringify(manualState) !== JSON.stringify(defaults.manualUma)
+			|| budgetRace.budget !== defaults.budget
+			|| budgetRace.raceContext !== undefined
+			|| Object.keys(hints).length > 0;
+		setSelection(null);
+		setEntryMode(defaults.entryMode);
+		setManualState(defaults.manualUma);
+		setBudgetRace({ budget: defaults.budget });
+		setHints(defaults.hints);
+		setPlan(null);
+		setResetKey(key => key + 1);
+	}
+
 	return (
 		<div id="skillOptimizer">
-			<h1>Skill Optimizer</h1>
+			<div class="optimizer-header">
+				<h1>Skill Optimizer</h1>
+				<button type="button" class="optimizer-reset" onClick={resetBuild}>Reset build</button>
+			</div>
 			<section class="optimizer-section">
 				<h2>1. Select uma</h2>
-				<UmaSelect onSelect={setSelection} />
+				<UmaSelect
+					key={resetKey}
+					onSelect={setSelection}
+					entryMode={entryMode}
+					manualState={manualState}
+					onEntryModeChange={setEntryMode}
+					onManualChange={(state, input) => { setManualState(state); setSelection(input); }}
+				/>
 			</section>
 			<section class="optimizer-section">
 				<h2>2. Budget &amp; target race</h2>
