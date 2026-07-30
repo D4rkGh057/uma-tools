@@ -9,7 +9,8 @@ import assert from 'node:assert/strict';
 
 import { effectMagnitude, isSituationalSkill, scoringContext, ScoringContext } from './score';
 import { buildProbes } from './probes';
-import { optimize } from './optimize';
+import { candidateGroupIds, optimize } from './optimize';
+import { skillGroups } from './skillGroups';
 import { DistanceBucket, RaceContext, UmaBuild } from './types';
 
 function closeTo(actual: number, expected: number, epsilon = 1e-9): void {
@@ -129,6 +130,10 @@ test('stat-point unit correction: a green stat skill is within ~1 order of magni
 
 // --- Positioning exclusion (spec: "Positioning Skills Excluded From Blended Score, Shown Separately") ---
 
+test('candidateGroupIds(): empty hints exclude every purchasable group', () => {
+	assert.deepEqual(candidateGroupIds({}), []);
+});
+
 test('isSituationalSkill: identifies real Positioning (ChangeLane) skills', () => {
 	// 201261/201262 pair a type-28 (Lane Speed) effect with a type-35 (ChangeLane/Positioning) effect
 	// in the same alternative -- the only two Positioning skills in the dataset.
@@ -142,7 +147,7 @@ test('optimize(): a Positioning group is absent from picks and present in situat
 	const input = {
 		ownedSkills: [],
 		budget: 0,
-		hints: {},
+		hints: { '201261': 0 },
 	};
 	const plan = optimize(input);
 	assert.ok(!plan.picks.some(p => p.groupId === '20126'));
@@ -261,11 +266,14 @@ test('optimize(): build.strategy DOES fill in style for fit-matching once raceCo
 	// here, changing the plan vs. leaving style unset entirely (proves the fallback still functions,
 	// just gated on raceContext being present at all).
 	const raceContext = { trackId: 10105 }; // Long course, per score.test.ts's own fixture above
-	const withoutBuildStrategy = optimize({ ownedSkills: [], budget: 0, hints: {}, raceContext });
+	// This comparison intentionally exercises every purchasable group, so opt each group in with one
+	// tier hint instead of relying on the former implicit all-groups candidate pool.
+	const hints = Object.fromEntries(Array.from(skillGroups.values(), tiers => [tiers[0], 0]));
+	const withoutBuildStrategy = optimize({ ownedSkills: [], budget: 0, hints, raceContext });
 	const withBuildStrategy = optimize({
 		ownedSkills: [],
 		budget: 0,
-		hints: {},
+		hints,
 		raceContext,
 		build: { strategy: 3 },
 	});
