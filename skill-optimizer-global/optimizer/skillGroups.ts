@@ -48,7 +48,7 @@ export const skillMeta = skillmeta as Record<string, SkillMeta>;
  * 1-6 exist in the dataset, "purchasable" reduces to `rarity < 3`, which excludes both the 3-5 range
  * and the 6+ range in one check.
  */
-function isSpPurchasableRarity(rarity: number): boolean {
+export function isSpPurchasableRarity(rarity: number): boolean {
 	return rarity < 3;
 }
 
