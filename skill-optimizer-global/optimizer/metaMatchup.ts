@@ -14,6 +14,7 @@ export function analyzeMatchup(profile: MetaProfile, archetypeId: string, claim:
 	if (claim === 'observation') return { status: 'ready', observation: evidence.observation, scope: evidence.scope, coverage: evidence.coverage, reproduction: evidence.reproduction, simulatorVersion: evidence.simulatorVersion };
 	const scope = numericScope(claim);
 	if (!scope) return { status: 'blocked', reason: 'Full-lobby, placement, and generalized traffic claims are unsupported' };
-	if (evidence.scope !== scope || evidence.numericDelta === undefined) return { status: 'unavailable', reason: 'No validated numeric evidence covers this claim' };
-	return { status: 'numeric', value: evidence.numericDelta, label: `${scope}-scoped; profile ${profile.id}@${profile.version}; simulator ${evidence.simulatorVersion}` };
+	const scopedEvidence = profile.evidence.find(item => item.archetypeId === archetypeId && item.scope === scope);
+	if (!scopedEvidence || scopedEvidence.numericDelta === undefined) return { status: 'unavailable', reason: 'No validated numeric evidence covers this claim' };
+	return { status: 'numeric', value: scopedEvidence.numericDelta, label: `${scope}-scoped; profile ${profile.id}@${profile.version}; simulator ${scopedEvidence.simulatorVersion}` };
 }
