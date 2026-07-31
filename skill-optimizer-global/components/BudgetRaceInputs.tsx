@@ -32,11 +32,11 @@ const SURFACE_OPTIONS: Array<{ value: 1 | 2; label: string }> = [
 ];
 
 const STYLE_OPTIONS: Array<{ value: 1 | 2 | 3 | 4 | 5; label: string }> = [
-	{ value: 1, label: 'Runner' },
-	{ value: 2, label: 'Leader' },
-	{ value: 3, label: 'Betweener' },
-	{ value: 4, label: 'Chaser' },
-	{ value: 5, label: 'Oonige' },
+	{ value: 1, label: 'Front Runner' },
+	{ value: 2, label: 'Pace Chaser' },
+	{ value: 3, label: 'Late Surger' },
+	{ value: 4, label: 'End Closer' },
+	{ value: 5, label: 'Great Escape' },
 ];
 
 const PHASE_OPTIONS: Array<{ value: 0 | 1 | 2 | 3; label: string }> = [
