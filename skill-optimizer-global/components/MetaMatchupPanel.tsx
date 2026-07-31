@@ -14,9 +14,13 @@ export function metaMatchupPanelContent(result: MetaEvaluationResult | null) {
 		provenance: `${profile.reference.id} v${profile.reference.version} — ${profile.provenance.source}; reviewed ${profile.provenance.reviewedAt}`,
 		assumptions: `Course: ${profile.assumptions.course}; lobby: ${profile.assumptions.lobby}`,
 		rules: profile.rules,
-		matchups: result.matchups.map(matchup => matchup.status === 'ready'
-			? `${matchup.archetype.label}: ${matchup.observation}; ${matchup.evidence.scope}-scoped; coverage ${matchup.evidence.coverage}; reproduction ${matchup.evidence.reproduction}; simulator ${matchup.evidence.simulatorVersion}`
-			: `${matchup.archetype.label}: unavailable — ${matchup.reason}`),
+		matchups: profile.archetypes.map(archetype => {
+			const matchup = result.matchups.find(item => item.archetype.id === archetype.id);
+			if (!matchup) return `${archetype.label}: unavailable — No matchup entry recorded for this archetype`;
+			return matchup.status === 'ready'
+				? `${matchup.archetype.label}: ${matchup.observation}; ${matchup.evidence.scope}-scoped; coverage ${matchup.evidence.coverage}; reproduction ${matchup.evidence.reproduction}; simulator ${matchup.evidence.simulatorVersion}`
+				: `${matchup.archetype.label}: unavailable — ${matchup.reason}`;
+		}),
 	};
 }
 

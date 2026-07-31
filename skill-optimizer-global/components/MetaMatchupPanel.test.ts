@@ -53,3 +53,25 @@ test('MetaMatchupPanel exposes exact LoH result provenance without consulting a 
 test('MetaMatchupPanel has no profile content before a result-owned meta evaluation exists', () => {
 	assert.equal(metaMatchupPanelContent(null), null);
 });
+
+test('MetaMatchupPanel reports every declared archetype as unavailable when its matchup entry is missing from the result', () => {
+	const missingCoverageResult: MetaEvaluationResult = {
+		...championsMeetingResult,
+		profile: {
+			...championsMeetingResult.profile,
+			archetypes: [
+				...championsMeetingResult.profile.archetypes,
+				{ id: 'closer', label: 'Late closer' },
+				{ id: 'stalker', label: 'Stalker' },
+			],
+		},
+		// matchups intentionally omits 'closer' and 'stalker' entirely (not just marked unavailable)
+	};
+
+	assert.deepEqual(metaMatchupPanelContent(missingCoverageResult)?.matchups, [
+		'Front runner: supported; pairwise-scoped; coverage 1 pair; reproduction seeded pairwise fixture; simulator umalator-1',
+		'Pace leader: unavailable — No profile-scoped evidence covers this archetype',
+		'Late closer: unavailable — No matchup entry recorded for this archetype',
+		'Stalker: unavailable — No matchup entry recorded for this archetype',
+	]);
+});
