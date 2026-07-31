@@ -143,3 +143,17 @@
 	color: #b00;
 	opacity: 0.8;
 }
+
+.mode-selector {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25em;
+	font-size: 0.85em;
+}
+
+.meta-matchup-panel {
+	margin-top: 0.75em;
+	padding: 0.5em;
+	border-left: 3px solid #777;
+	font-size: 0.9em;
+}

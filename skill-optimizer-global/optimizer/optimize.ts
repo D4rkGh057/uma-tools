@@ -8,9 +8,9 @@ import { skillGroups, skillMeta } from './skillGroups';
 import { solve } from './knapsack';
 import { GroupOption, HintInput, OptimizeInput, Plan, RaceProbes, SituationalSkill } from './types';
 
-const DEFAULT_BLEND_WEIGHT = 0.5;
+export const DEFAULT_BLEND_WEIGHT = 0.5;
 
-function ownedIndexByGroup(ownedSkills: Array<{ id: number; level: number }>): Map<string, number> {
+export function ownedIndexByGroup(ownedSkills: Array<{ id: number; level: number }>): Map<string, number> {
 	const owned = new Map<string, number>();
 	for (const s of ownedSkills) {
 		const idStr = String(s.id);

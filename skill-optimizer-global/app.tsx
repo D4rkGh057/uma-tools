@@ -8,22 +8,32 @@ import { UmaInput } from './components/umaInput';
 import { BudgetRaceInputs, BudgetRaceInputsValue } from './components/BudgetRaceInputs';
 import { HintTable } from './components/HintTable';
 import { ResultPanel } from './components/ResultPanel';
-import { optimize } from './optimizer/optimize';
-import { HintInput, OptimizeInput, Plan } from './optimizer/types';
-import { clearOptimizerBuild, defaultOptimizerBuildState, EntryMode, loadOptimizerBuild, ManualUmaState, saveOptimizerBuild } from './optimizerBuildStorage';
+import { ModeSelector } from './components/ModeSelector';
+import { MetaMatchupPanel } from './components/MetaMatchupPanel';
+import { evaluate } from './optimizer/evaluation';
+import { profileCatalog } from './optimizer/profiles/catalog';
+import { MetaProfileReference } from './optimizer/profiles/types';
+import { EvaluationMode, EvaluationResult, HintInput, OptimizeInput } from './optimizer/types';
+import { clearOptimizerBuild, defaultOptimizerBuildState, EntryMode, loadOptimizerBuildOutcome, ManualUmaState, OptimizerBuildSelection, saveOptimizerBuild } from './optimizerBuildStorage';
+import { ResultPanelState } from './components/resultPanelState';
 
 // Wires the input panels' state into `optimizer/optimize.ts`'s `OptimizeInput` and renders the result
 // via `ResultPanel`. `selection` converges both the roster-import and manual-entry paths into one
 // `UmaInput` shape (spec domain: manual-uma-entry, "Single Converged Uma Shape, No Silent Merge") --
 // see components/UmaSelect.tsx / components/umaInput.ts.
 function App() {
-	const initialBuild = useMemo(loadOptimizerBuild, []);
+	const initialLoad = useMemo(loadOptimizerBuildOutcome, []);
+	const initialBuild = initialLoad.state;
+	const initialSelection: OptimizerBuildSelection = initialLoad.status === 'rejected' ? { mode: 'Score' } : initialLoad.selection;
 	const [selection, setSelection] = useState<UmaInput | null>(null);
 	const [entryMode, setEntryMode] = useState<EntryMode>(initialBuild.entryMode);
 	const [manualState, setManualState] = useState<ManualUmaState>(initialBuild.manualUma);
 	const [budgetRace, setBudgetRace] = useState<BudgetRaceInputsValue>({ budget: initialBuild.budget, raceContext: initialBuild.raceContext });
 	const [hints, setHints] = useState<HintInput>(initialBuild.hints);
-	const [plan, setPlan] = useState<Plan | null>(null);
+	const [mode, setMode] = useState<EvaluationMode>(initialSelection.mode);
+	const [profile, setProfile] = useState<MetaProfileReference | undefined>(initialSelection.profile);
+	const [result, setResult] = useState<EvaluationResult | null>(null);
+	const [state, setState] = useState<ResultPanelState | null>(initialLoad.status === 'migrated' ? initialLoad : initialLoad.status === 'rejected' ? { status: 'invalid', mode: 'persisted', reason: initialLoad.reason } : null);
 	const [resetKey, setResetKey] = useState(0);
 	const skipNextPersistence = useRef(false);
 
@@ -32,8 +42,8 @@ function App() {
 			skipNextPersistence.current = false;
 			return;
 		}
-		saveOptimizerBuild({ entryMode, manualUma: manualState, budget: budgetRace.budget, raceContext: budgetRace.raceContext, hints });
-	}, [entryMode, manualState, budgetRace, hints]);
+		saveOptimizerBuild({ entryMode, manualUma: manualState, budget: budgetRace.budget, raceContext: budgetRace.raceContext, hints }, undefined, { mode, ...(profile ? { profile } : {}) });
+	}, [entryMode, manualState, budgetRace, hints, mode, profile]);
 
 	// `selection.ownedSkills` is exactly the shape `OptimizeInput.ownedSkills` expects (design decision
 	// #7 precedent) -- passed straight through, no reshaping. `selection.build` enables HP-projection
@@ -52,7 +62,18 @@ function App() {
 	// Only recomputed on explicit "Optimize build" click, not on every input change -- avoids running
 	// the optimizer on each keystroke and lets `plan` stay a plain user-triggered snapshot.
 	function runOptimize() {
-		setPlan(optimizeInput ? optimize(optimizeInput) : null);
+		const request = optimizeInput && ((mode === 'ChampionsMeeting' || mode === 'LeagueOfHeroes') && profile
+			? { ...optimizeInput, mode, profile }
+			: { ...optimizeInput, mode });
+		setResult(request ? evaluate(request) : null);
+		setState(null);
+	}
+
+	function changeMode(nextMode: EvaluationMode) {
+		setMode(nextMode);
+		const nextProfile = profileCatalog.find(candidate => candidate.mode === nextMode);
+		setProfile(nextProfile && { id: nextProfile.id, version: nextProfile.version });
+		setResult(null);
 	}
 
 	function resetBuild() {
@@ -71,9 +92,14 @@ function App() {
 		setManualState(defaults.manualUma);
 		setBudgetRace({ budget: defaults.budget });
 		setHints(defaults.hints);
-		setPlan(null);
+		setMode('Score');
+		setProfile(undefined);
+		setResult(null);
+		setState(null);
 		setResetKey(key => key + 1);
 	}
+
+	const metaResult = result?.status === 'ready' && (result.mode === 'ChampionsMeeting' || result.mode === 'LeagueOfHeroes') ? result : null;
 
 	return (
 		<div id="skillOptimizer">
@@ -101,11 +127,16 @@ function App() {
 				<HintTable hints={hints} onChange={setHints} />
 			</section>
 			<section class="optimizer-section">
-				<h2>4. Result</h2>
+				<h2>4. Evaluation mode</h2>
+				<ModeSelector mode={mode} onChange={changeMode} />
+				<MetaMatchupPanel result={metaResult} />
+			</section>
+			<section class="optimizer-section">
+				<h2>5. Result</h2>
 				<button type="button" disabled={!optimizeInput} onClick={runOptimize}>
 					Optimize build
 				</button>
-				<ResultPanel input={optimizeInput} plan={plan} />
+				<ResultPanel input={optimizeInput} plan={result?.status === 'ready' ? result.purchase : null} result={result} state={state} />
 			</section>
 		</div>
 	);

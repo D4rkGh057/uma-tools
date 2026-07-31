@@ -2,6 +2,8 @@
 // This module (and everything else under optimizer/) MUST NOT import preact, DOM, or any UI code
 // -- see design decision #6 (isolation = one-folder rollback + future unit-testability).
 
+import type { MetaArchetype, MetaAssumptions, MetaMode, MetaProfileReference, MetaProvenance, Observation, EvidenceScope } from './profiles/types';
+
 /** Distance categories the game itself uses (see uma-skill-tools/CourseData.ts DistanceType). */
 export type DistanceBucket = 'Short' | 'Mile' | 'Mid' | 'Long';
 
@@ -123,3 +125,42 @@ export interface OptimizeInput {
 	 *  raceContext.style when raceContext.style itself is unset. */
 	build?: UmaBuild;
 }
+
+export type EvaluationMode = 'Score' | 'TeamTrials' | 'ChampionsMeeting' | 'LeagueOfHeroes';
+
+export type EvaluationRequest = OptimizeInput & (
+	| { readonly mode: 'Score' | 'TeamTrials' }
+	| { readonly mode: MetaMode; readonly profile: MetaProfileReference }
+	| { readonly mode: string; readonly profile?: MetaProfileReference }
+);
+
+export interface CandidateBreakdown {
+	readonly skillId: string;
+	readonly cost: number;
+	readonly score: number;
+	readonly picked: boolean;
+	readonly excluded: boolean;
+	readonly exclusionReason: string | null;
+}
+
+export interface GroupBreakdown {
+	readonly groupId: string;
+	readonly ownedSkillId: string | null;
+	readonly candidates: readonly CandidateBreakdown[];
+}
+
+export type MatchupObservation =
+	| { readonly archetype: MetaArchetype; readonly status: 'ready'; readonly observation: Observation; readonly evidence: { readonly scope: EvidenceScope; readonly coverage: string; readonly reproduction: string; readonly simulatorVersion: string } }
+	| { readonly archetype: MetaArchetype; readonly status: 'unavailable'; readonly reason: string };
+
+export type MetaEvaluationResult = {
+	readonly status: 'ready'; readonly mode: MetaMode; readonly purchase: Readonly<Plan>; readonly breakdown: readonly GroupBreakdown[];
+	readonly profile: { readonly reference: MetaProfileReference; readonly provenance: MetaProvenance; readonly assumptions: MetaAssumptions; readonly archetypes: readonly MetaArchetype[]; readonly rules: readonly string[] };
+	readonly matchups: readonly MatchupObservation[];
+};
+
+export type EvaluationResult =
+	| { readonly status: 'ready'; readonly mode: 'Score'; readonly purchase: Readonly<Plan>; readonly breakdown: readonly GroupBreakdown[] }
+	| MetaEvaluationResult
+	| { readonly status: 'unavailable'; readonly mode: 'TeamTrials'; readonly reason: string; readonly purchase: Readonly<Plan>; readonly breakdown: readonly GroupBreakdown[] }
+	| { readonly status: 'invalid'; readonly mode: string; readonly reason: string };
