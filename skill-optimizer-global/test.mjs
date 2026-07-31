@@ -13,6 +13,7 @@ import { spawn } from 'node:child_process';
 import { makeRedirectData, makeMockAssert } from './esbuild-plugins.mjs';
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
+const rootdir = path.join(dirname, '..');
 const datadir = path.join(dirname, '..', 'umalator-global');
 const outdir = path.join(dirname, '.test-bundle');
 
@@ -22,6 +23,7 @@ const entryPoints = [
 	path.join(dirname, 'optimizer', 'hp.test.ts'),
 	path.join(dirname, 'components', 'umaInput.test.ts'),
 	path.join(dirname, 'optimizerBuildStorage.test.ts'),
+	path.join(dirname, '..', 'umalator', 'resultsState.test.ts'),
 ];
 
 await esbuild.build({
@@ -30,6 +32,7 @@ await esbuild.build({
 	platform: 'node',
 	format: 'esm',
 	outdir,
+	outbase: rootdir,
 	define: {CC_DEBUG: 'true', CC_GLOBAL: 'true'},
 	// node:test and node:assert/strict are Node's own built-ins used directly by the *.test.ts files --
 	// they must stay real runtime imports, not be bundled. The bare 'node:assert' specifier (used
@@ -41,7 +44,7 @@ await esbuild.build({
 });
 
 const outfiles = entryPoints.map(entry =>
-	path.join(outdir, path.relative(dirname, entry).replace(/\.tsx?$/, '.js'))
+	path.join(outdir, path.relative(rootdir, entry).replace(/\.tsx?$/, '.js'))
 );
 
 const child = spawn(process.execPath, ['--test', ...outfiles], {stdio: 'inherit'});
