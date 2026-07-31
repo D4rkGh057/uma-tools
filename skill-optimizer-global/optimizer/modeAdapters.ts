@@ -34,5 +34,5 @@ export const modeAdapters: Record<EvaluationMode, ModeAdapter> = {
 };
 
 export function isEvaluationMode(mode: string): mode is EvaluationMode {
-	return mode in modeAdapters;
+	return Object.prototype.hasOwnProperty.call(modeAdapters, mode);
 }

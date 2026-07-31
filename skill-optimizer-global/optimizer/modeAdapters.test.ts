@@ -15,3 +15,9 @@ test('mode adapters route every declared mode and retain the shared purchase pla
 	}
 	assert.equal(isEvaluationMode('Unknown'), false);
 });
+
+test('isEvaluationMode rejects inherited Object.prototype property names', () => {
+	assert.equal(isEvaluationMode('toString'), false);
+	assert.equal(isEvaluationMode('constructor'), false);
+	assert.equal(isEvaluationMode('hasOwnProperty'), false);
+});
