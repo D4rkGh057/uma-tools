@@ -7,7 +7,7 @@ Setup:
 ```
 git clone https://github.com/alpha123/uma-skill-tools.git
 cd uma-skill-tools
-npm install --dev
+pnpm install
 ```
 
 This will install `ts-node`, which you can use to run the CLI tools.
