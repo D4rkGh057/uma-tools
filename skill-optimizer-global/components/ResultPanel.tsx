@@ -36,50 +36,35 @@ export function ResultPanel({ input, plan, result, state }: ResultPanelProps) {
 	const breakdown = showBreakdown ? readyContent?.breakdown : null;
 
 	if (stateContent) {
-		return <div class="result-panel-empty">{resultPanelStateContent(stateContent).message}</div>;
+		return <div class="result-panel-empty" role="status">{resultPanelStateContent(stateContent).message}</div>;
 	}
 
 	if (!displayedPlan) {
-		return <div class="result-panel-empty">Select an uma to see a recommended purchase combo.</div>;
+		return <div class="result-panel-empty" role="status">Select an uma to see a recommended purchase combo.</div>;
 	}
 
 	return (
 		<div class="result-panel">
+			<h3>Last optimized result</h3>
 			<div class="result-summary">
 				<span>Total cost: {displayedPlan.totalCost} SP</span>
 				<span>Total score: {displayedPlan.totalScore.toFixed(3)}</span>
 			</div>
 
 			{displayedPlan.picks.length === 0 && (
-				<div class="result-empty">No purchase improves the score within budget.</div>
+				<div class="result-empty" role="status">No purchase improves the score within budget.</div>
 			)}
 			{displayedPlan.picks.length > 0 && (
-				<table class="result-picks">
-					<thead><tr><th>Skill</th><th>Cost</th><th>Score</th><th>Steps</th></tr></thead>
-					<tbody>
-						{displayedPlan.picks.map(p => (
-							<tr key={`${p.groupId}-${p.targetIdx}`}>
-								<td>{getSkillName(p.skillId)}</td>
-								<td>{p.cost}</td>
-								<td>{p.score.toFixed(3)}</td>
-								<td>{p.steps.map(s => `${getSkillName(s.skillId)} (hint ${s.hint}, ${s.cost} SP)`).join(', ')}</td>
-							</tr>
-						))}
-					</tbody>
-				</table>
-			)}
-
-			{displayedPlan.situational.length > 0 && (
-				<div class="result-situational">
-					<div class="result-situational-header">Situational (not scored)</div>
-					<table class="result-situational-table">
-						<thead><tr><th>Skill</th><th>Cost</th><th>Reason</th></tr></thead>
+				<div class="result-table-overflow" aria-label="Recommended purchases" tabIndex={0}>
+					<table class="result-picks">
+						<thead><tr><th>Skill</th><th>Cost</th><th>Score</th><th>Steps</th></tr></thead>
 						<tbody>
-						{displayedPlan.situational.map(s => (
-								<tr key={`${s.groupId}-${s.skillId}`}>
-									<td>{getSkillName(s.skillId)}</td>
-									<td>{s.cost}</td>
-									<td>{s.reason}</td>
+							{displayedPlan.picks.map(p => (
+								<tr key={`${p.groupId}-${p.targetIdx}`}>
+									<td>{getSkillName(p.skillId)}</td>
+									<td>{p.cost}</td>
+									<td>{p.score.toFixed(3)}</td>
+									<td>{p.steps.map(s => `${getSkillName(s.skillId)} (hint ${s.hint}, ${s.cost} SP)`).join(', ')}</td>
 								</tr>
 							))}
 						</tbody>
@@ -87,30 +72,52 @@ export function ResultPanel({ input, plan, result, state }: ResultPanelProps) {
 				</div>
 			)}
 
-			<button type="button" class="result-breakdown-toggle" onClick={() => setShowBreakdown(v => !v)}>
+			{displayedPlan.situational.length > 0 && (
+				<div class="result-situational">
+					<div class="result-situational-header">Situational (not scored)</div>
+					<div class="result-table-overflow" aria-label="Situational purchases" tabIndex={0}>
+						<table class="result-situational-table">
+							<thead><tr><th>Skill</th><th>Cost</th><th>Reason</th></tr></thead>
+							<tbody>
+							{displayedPlan.situational.map(s => (
+									<tr key={`${s.groupId}-${s.skillId}`}>
+										<td>{getSkillName(s.skillId)}</td>
+										<td>{s.cost}</td>
+										<td>{s.reason}</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			)}
+
+			<button type="button" class="result-breakdown-toggle" aria-expanded={showBreakdown} aria-controls="result-breakdown" onClick={() => setShowBreakdown(v => !v)}>
 				{showBreakdown ? 'Hide' : 'Show'} dev breakdown
 			</button>
 			{breakdown && (
-				<div class="result-breakdown">
+				<div class="result-breakdown" id="result-breakdown">
 					{breakdown.filter(g => g.candidates.length > 0).map(g => (
 						<div class="result-breakdown-group" key={g.groupId}>
 							<div class="result-breakdown-group-header">
 								Group {g.groupId} (owned: {g.ownedSkillId ? getSkillName(g.ownedSkillId) : 'none'})
 							</div>
-							<table>
-								<thead><tr><th>Skill</th><th>Cost</th><th>Score</th><th>Picked</th><th>Excluded</th></tr></thead>
-								<tbody>
-									{g.candidates.map(c => (
-										<tr key={c.skillId} class={c.excluded ? 'result-breakdown-excluded' : ''}>
-											<td>{c.name}</td>
-											<td>{c.cost}</td>
-											<td>{c.score.toFixed(3)}</td>
-											<td>{c.picked ? 'yes' : ''}</td>
-											<td>{c.exclusionReason ?? ''}</td>
-										</tr>
-									))}
-								</tbody>
-							</table>
+							<div class="result-table-overflow" aria-label={`Developer breakdown for group ${g.groupId}`} tabIndex={0}>
+								<table>
+									<thead><tr><th>Skill</th><th>Cost</th><th>Score</th><th>Picked</th><th>Excluded</th></tr></thead>
+									<tbody>
+										{g.candidates.map(c => (
+											<tr key={c.skillId} class={c.excluded ? 'result-breakdown-excluded' : ''}>
+												<td>{c.name}</td>
+												<td>{c.cost}</td>
+												<td>{c.score.toFixed(3)}</td>
+												<td>{c.picked ? 'yes' : ''}</td>
+												<td>{c.exclusionReason ?? ''}</td>
+											</tr>
+										))}
+									</tbody>
+								</table>
+							</div>
 						</div>
 					))}
 				</div>

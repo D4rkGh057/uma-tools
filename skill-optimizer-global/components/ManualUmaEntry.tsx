@@ -80,14 +80,16 @@ export function ManualUmaEntry({ initialState: savedState, onChange }: ManualUma
 
 	return (
 		<div class="manual-uma-entry">
-			<div class="manual-uma-stats">
+			<fieldset class="manual-uma-stats">
+				<legend>Build stats</legend>
 				<Stat label="Speed" statIdx={0} value={state.speed ?? ''} change={statField('speed')} />
 				<Stat label="Stamina" statIdx={1} value={state.stamina ?? ''} change={statField('stamina')} />
 				<Stat label="Power" statIdx={2} value={state.power ?? ''} change={statField('power')} />
 				<Stat label="Guts" statIdx={3} value={state.guts ?? ''} change={statField('guts')} />
 				<Stat label="Wit" statIdx={4} value={state.wisdom ?? ''} change={statField('wisdom')} />
-			</div>
-			<div class="manual-uma-apts">
+			</fieldset>
+			<fieldset class="manual-uma-apts">
+				<legend>Aptitudes</legend>
 				<label class="manual-uma-apt-cell">
 					<span>Strategy</span>
 					<StrategySelect s={state.strategy} setS={(s: ManualForm['strategy']) => commit({ strategy: s })} />
@@ -104,7 +106,7 @@ export function ManualUmaEntry({ initialState: savedState, onChange }: ManualUma
 					<span>Style</span>
 					<AptitudeSelect a={state.strategyAptitude} setA={(a: string) => commit({ strategyAptitude: a })} />
 				</label>
-			</div>
+			</fieldset>
 			<div class="manual-uma-skills">
 				{state.ownedSkills.length === 0 && <div class="manual-uma-skills-empty">No owned skills added yet.</div>}
 				{state.ownedSkills.length > 0 && (
@@ -112,7 +114,7 @@ export function ManualUmaEntry({ initialState: savedState, onChange }: ManualUma
 						{state.ownedSkills.map(s => (
 							<li key={s.id}>
 								Skill {s.id}
-								<button type="button" class="manual-uma-skill-remove" onClick={() => removeSkill(s.id)}>×</button>
+									<button type="button" class="manual-uma-skill-remove" aria-label={`Remove skill ${s.id}`} onClick={() => removeSkill(s.id)}>×</button>
 							</li>
 						))}
 					</ul>

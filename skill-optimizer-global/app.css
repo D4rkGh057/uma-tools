@@ -5,6 +5,21 @@
 	font-family: sans-serif;
 }
 
+#skillOptimizer {
+	--optimizer-surface: #fff;
+	--optimizer-surface-muted: #f5f7fa;
+	--optimizer-text: #172033;
+	--optimizer-muted: #526074;
+	--optimizer-border: #c8d1dc;
+	--optimizer-accent: #1769c2;
+	--optimizer-focus: #004c97;
+	--optimizer-danger: #ae1c2b;
+	--optimizer-radius: 8px;
+	--optimizer-shadow: 0 1px 3px rgb(23 32 51 / 12%);
+	color: var(--optimizer-text);
+	font-family: system-ui, sans-serif;
+}
+
 .optimizer-header {
 	display: flex;
 	align-items: center;
@@ -103,14 +118,23 @@
 }
 
 .result-picks,
+.result-situational-table,
 .result-breakdown-group table {
 	border-collapse: collapse;
 	width: 100%;
+	min-width: 38rem;
+	margin-bottom: 0.5em;
+}
+
+.result-table-overflow {
+	overflow-x: auto;
 	margin-bottom: 0.5em;
 }
 
 .result-picks td,
 .result-picks th,
+.result-situational-table td,
+.result-situational-table th,
 .result-breakdown-group td,
 .result-breakdown-group th {
 	padding: 0.25em 0.5em;
@@ -156,4 +180,105 @@
 	padding: 0.5em;
 	border-left: 3px solid #777;
 	font-size: 0.9em;
+}
+
+#skillOptimizer .optimizer-header { margin: 1.5rem 0 1rem; }
+
+#skillOptimizer .optimizer-header h1,
+#skillOptimizer .optimizer-section h2,
+#skillOptimizer .optimizer-results h2 { margin: 0; }
+
+#skillOptimizer .optimizer-header p,
+#skillOptimizer .optimizer-snapshot,
+#skillOptimizer .optimizer-action p { color: var(--optimizer-muted); margin: 0.25rem 0 0; }
+
+#skillOptimizer .optimizer-section,
+#skillOptimizer .optimizer-results {
+	background: var(--optimizer-surface);
+	border: 1px solid var(--optimizer-border);
+	border-radius: var(--optimizer-radius);
+	box-shadow: var(--optimizer-shadow);
+	margin-bottom: 0.75rem;
+	padding: 1rem;
+}
+
+#skillOptimizer .optimizer-section h2,
+#skillOptimizer .optimizer-results h2 { font-size: 1rem; margin-bottom: 0.75rem; }
+
+#skillOptimizer button,
+#skillOptimizer input,
+#skillOptimizer select { min-height: 44px; }
+
+#skillOptimizer button {
+	border: 1px solid var(--optimizer-border);
+	border-radius: 6px;
+	background: var(--optimizer-surface);
+	color: inherit;
+	cursor: pointer;
+	padding: 0.5rem 0.75rem;
+}
+
+#skillOptimizer button:hover:not(:disabled) { background: var(--optimizer-surface-muted); border-color: var(--optimizer-accent); }
+#skillOptimizer button:disabled { cursor: not-allowed; opacity: 0.55; }
+#skillOptimizer :focus-visible { outline: 3px solid var(--optimizer-focus); outline-offset: 2px; }
+
+#skillOptimizer .optimizer-submit {
+	background: var(--optimizer-accent);
+	border-color: var(--optimizer-accent);
+	color: #fff;
+	font-weight: 700;
+	width: 100%;
+}
+
+#skillOptimizer .optimizer-submit:hover:not(:disabled) { background: var(--optimizer-focus); border-color: var(--optimizer-focus); }
+#skillOptimizer .optimizer-results { background: var(--optimizer-surface-muted); }
+#skillOptimizer .optimizer-results .result-panel-empty { border-left: 3px solid var(--optimizer-accent); padding-left: 0.75rem; }
+#skillOptimizer .result-panel h3 { font-size: 1rem; margin: 0 0 0.75rem; }
+#skillOptimizer .uma-select-error,
+#skillOptimizer .result-breakdown-excluded { color: var(--optimizer-danger); font-weight: 600; }
+
+#skillOptimizer fieldset {
+	border: 1px solid var(--optimizer-border);
+	border-radius: var(--optimizer-radius);
+	margin: 0;
+	min-width: 0;
+	padding: 0.75rem;
+}
+
+#skillOptimizer legend { font-weight: 700; padding: 0 0.25rem; }
+#skillOptimizer .uma-select-path-switch { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
+#skillOptimizer .uma-select-path-switch button[aria-pressed="true"] { border-width: 2px; border-color: var(--optimizer-accent); font-weight: 700; }
+#skillOptimizer .uma-select-path-switch button[aria-pressed="true"]::before { content: 'Selected: '; }
+#skillOptimizer .manual-uma-stats,
+#skillOptimizer .manual-uma-apts,
+#skillOptimizer .race-context { display: grid; gap: 0.75rem; }
+#skillOptimizer .race-context-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#skillOptimizer .manual-uma-stats { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+#skillOptimizer .manual-uma-apts { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 0.75rem; }
+#skillOptimizer .race-context { flex: 1 1 20rem; }
+#skillOptimizer .race-context-toggle { display: flex; align-items: center; gap: 0.5rem; }
+#skillOptimizer .mode-selector #mode-help,
+#skillOptimizer .hint-table-empty,
+#skillOptimizer .uma-select-status { color: var(--optimizer-muted); font-size: 0.9rem; }
+#skillOptimizer input:invalid { border: 2px solid var(--optimizer-danger); }
+#skillOptimizer input:invalid::placeholder { color: var(--optimizer-danger); }
+#skillOptimizer .hint-table-rows caption { caption-side: top; font-weight: 700; text-align: left; }
+
+@media (max-width: 768px) {
+	#app { width: auto; margin: 0 0.75rem; }
+	#skillOptimizer .optimizer-header { align-items: flex-start; flex-direction: column; }
+	#skillOptimizer .optimizer-reset,
+	#skillOptimizer .uma-select-import input,
+	#skillOptimizer .uma-select-import button { width: 100%; }
+	#skillOptimizer .manual-uma-stats,
+	#skillOptimizer .manual-uma-apts,
+	#skillOptimizer .race-context-fields { grid-template-columns: 1fr; }
+	#skillOptimizer .race-context { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	#skillOptimizer *, #skillOptimizer *::before, #skillOptimizer *::after {
+		animation-duration: 0.01ms !important;
+		transition-duration: 0.01ms !important;
+	}
 }

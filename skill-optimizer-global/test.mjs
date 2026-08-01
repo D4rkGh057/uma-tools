@@ -29,6 +29,8 @@ const entryPoints = [
 	path.join(dirname, 'components', 'MetaMatchupPanel.test.ts'),
 	path.join(dirname, 'components', 'ModeSelector.test.ts'),
 	path.join(dirname, 'components', 'umaInput.test.ts'),
+	path.join(dirname, 'components', 'presentationSemantics.test.ts'),
+	path.join(dirname, 'appPresentation.test.ts'),
 	path.join(dirname, 'optimizerBuildStorage.test.ts'),
 	path.join(dirname, '..', 'umalator', 'resultsState.test.ts'),
 ];

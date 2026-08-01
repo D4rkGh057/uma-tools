@@ -115,10 +115,10 @@ export function UmaSelect({ onSelect, entryMode: path, manualState, onEntryModeC
 	return (
 		<div class="uma-select">
 			<div class="uma-select-path-switch">
-				<button type="button" class={path === 'roster' ? 'active' : ''} onClick={() => switchPath('roster')}>
+				<button type="button" class={path === 'roster' ? 'active' : ''} aria-pressed={path === 'roster'} onClick={() => switchPath('roster')}>
 					Import roster
 				</button>
-				<button type="button" class={path === 'manual' ? 'active' : ''} onClick={() => switchPath('manual')}>
+				<button type="button" class={path === 'manual' ? 'active' : ''} aria-pressed={path === 'manual'} onClick={() => switchPath('manual')}>
 					Enter manually
 				</button>
 			</div>
@@ -128,6 +128,7 @@ export function UmaSelect({ onSelect, entryMode: path, manualState, onEntryModeC
 					<div class="uma-select-import">
 						<input
 							type="text"
+							aria-label="Roster URL or code"
 							placeholder="Paste your roster URL or code from roster.uma.guide…"
 							value={inputValue}
 							onInput={e => setInputValue((e.target as HTMLInputElement).value)}
@@ -135,10 +136,10 @@ export function UmaSelect({ onSelect, entryMode: path, manualState, onEntryModeC
 						/>
 						<button type="button" onClick={handleImport}>Load roster</button>
 					</div>
-					{error && <div class="uma-select-error">{error}</div>}
-					{loading && <div class="uma-select-status">Loading saved roster…</div>}
+					{error && <div class="uma-select-error" role="alert">{error}</div>}
+					{loading && <div class="uma-select-status" role="status">Loading saved roster…</div>}
 					{!loading && roster.length === 0 && (
-						<div class="uma-select-status">No roster loaded yet. Paste a URL or code above.</div>
+						<div class="uma-select-status" role="status">No roster loaded yet. Paste a URL or code above.</div>
 					)}
 					{roster.length > 0 && (
 						<select
@@ -159,7 +160,7 @@ export function UmaSelect({ onSelect, entryMode: path, manualState, onEntryModeC
 					)}
 					{selected && (
 						<div class="uma-select-summary">
-							<img class="uma-select-icon" src={getCharIcon(selected.card_id)} loading="lazy" />
+							<img class="uma-select-icon" src={getCharIcon(selected.card_id)} alt={`${getCharInfo(selected.card_id).charName} portrait`} loading="lazy" />
 							<span>Owned skill tiers: {selectedTierCount} group(s), {selected.skills.length} total skills</span>
 						</div>
 					)}

@@ -81,17 +81,19 @@ export function BudgetRaceInputs({ value, onChange }: BudgetRaceInputsProps) {
 				/>
 			</label>
 
-			<label class="race-context-toggle">
-				<input
-					type="checkbox"
-					checked={hasRaceContext}
-					onChange={e => toggleRaceContext((e.target as HTMLInputElement).checked)}
-				/>
-				<span>Set target race (spec: "No target race set" runs in generic mode)</span>
-			</label>
+			<fieldset class="race-context">
+				<legend>Target race</legend>
+				<label class="race-context-toggle">
+					<input
+						type="checkbox"
+						checked={hasRaceContext}
+						onChange={e => toggleRaceContext((e.target as HTMLInputElement).checked)}
+					/>
+					<span>Set target race (spec: "No target race set" runs in generic mode)</span>
+				</label>
 
-			{hasRaceContext && (
-				<div class="race-context-fields">
+				{hasRaceContext && (
+					<div class="race-context-fields">
 					<label>
 						<span>Track</span>
 						<TrackSelect
@@ -139,8 +141,9 @@ export function BudgetRaceInputs({ value, onChange }: BudgetRaceInputsProps) {
 							{PHASE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
 						</select>
 					</label>
-				</div>
-			)}
+					</div>
+				)}
+			</fieldset>
 		</div>
 	);
 }

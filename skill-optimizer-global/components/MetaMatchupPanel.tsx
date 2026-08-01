@@ -26,7 +26,7 @@ export function metaMatchupPanelContent(result: MetaEvaluationResult | null) {
 
 export function MetaMatchupPanel({ result }: { result: MetaEvaluationResult | null }) {
 	const content = metaMatchupPanelContent(result);
-	return content && <div class="meta-matchup-panel">
+	return content && <div class="meta-matchup-panel" role="region" aria-label="Meta matchup profile" aria-live="polite">
 		<strong>{content.heading}:</strong> {content.provenance}
 		<div>{content.assumptions}</div>
 		<ul>{content.rules.map(rule => <li>{rule}</li>)}</ul>

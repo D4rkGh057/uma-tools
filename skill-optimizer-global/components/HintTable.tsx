@@ -47,9 +47,10 @@ export function HintTable({ hints, onChange }: HintTableProps) {
 
 	return (
 		<div class="hint-table">
-			{rows.length === 0 && <div class="hint-table-empty">No hint levels set -- add a skill hint to include it as a candidate.</div>}
+			{rows.length === 0 && <div class="hint-table-empty" role="status">No hint levels set -- add a skill hint to include it as a candidate.</div>}
 			{rows.length > 0 && (
 				<table class="hint-table-rows">
+					<caption>Skill hint levels</caption>
 					<thead>
 						<tr><th>Skill</th><th>Hint (0-5)</th><th /></tr>
 					</thead>
@@ -62,13 +63,14 @@ export function HintTable({ hints, onChange }: HintTableProps) {
 										type="number"
 										min="0"
 										max="5"
-										step="1"
+									step="1"
+									aria-label={`Hint level for ${getSkillName(skillId)}`}
 										value={hints[skillId]}
 										onInput={e => setHint(skillId, (e.target as HTMLInputElement).value)}
 									/>
 								</td>
 								<td>
-									<button type="button" class="hint-table-remove" onClick={() => removeRow(skillId)}>×</button>
+									<button type="button" class="hint-table-remove" aria-label={`Remove hint for ${getSkillName(skillId)}`} onClick={() => removeRow(skillId)}>×</button>
 								</td>
 							</tr>
 						))}
