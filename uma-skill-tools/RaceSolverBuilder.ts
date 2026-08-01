@@ -24,6 +24,7 @@ export interface HorseDesc {
 	surfaceAptitude: string | Aptitude
 	strategyAptitude: string | Aptitude
 	mood: Mood
+	skills: string[]
 }
 
 const GroundSpeedModifier = Object.freeze([
@@ -869,7 +870,9 @@ export class RaceSolverBuilder {
 		Object.freeze(wholeCourse);
 
 		const makeSkill = buildSkillData.bind(null, horse, this._raceParams, this._course, wholeCourse, this._parser);
-		const skilldata = this._skills.flatMap(({id,p,level}) => makeSkill(id, p, level));
+		const builtSkills = this._skills.map(({id,p,level}) => makeSkill(id, p, level));
+		const skilldata = builtSkills.flat();
+		const originWisdom = this._skills.flatMap(({originWisdom}, i) => builtSkills[i].map(() => originWisdom));
 		this._extraSkillHooks.forEach(h => h(skilldata, horse, this._course));
 		const triggers = skilldata.map(sd => {
 			const key = sd.perspective != null ? this.getSamplePolicyKey(sd.skillId, sd.perspective) : sd.skillId;
@@ -888,9 +891,9 @@ export class RaceSolverBuilder {
 				perspective: sd.perspective,
 				rarity: sd.rarity,
 				trigger: triggers[sdi][i % triggers[sdi].length],
-				extraCondition: sd.extraCondition,
-				effects: sd.effects,
-				originWisdom: this._skills[sdi].originWisdom
+					extraCondition: sd.extraCondition,
+					effects: sd.effects,
+					originWisdom: originWisdom[sdi]
 			}));
 
 			const hpRng = new Rule30CARng(this._rng.int32());

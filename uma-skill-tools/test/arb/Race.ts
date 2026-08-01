@@ -18,7 +18,9 @@ const skillids = Object.freeze(Object.keys(skills).filter(id => {
 		strategy: 'Nige',
 		distanceAptitude: 'A',
 		surfaceAptitude: 'A',
-		strategyAptitude: 'A'
+		strategyAptitude: 'A',
+		mood: 0,
+		skills: []
 	}).addSkill(id);
 	try {
 		const g = b.build();
@@ -77,7 +79,8 @@ export function HorseDesc() {
 		strategy: Strategy(),
 		distanceAptitude: Aptitude(),
 		surfaceAptitude: Aptitude(),
-		strategyAptitude: Aptitude()
+		strategyAptitude: Aptitude(),
+		skills: SkillList()
 	});
 }
 
@@ -87,7 +90,7 @@ export function SkillList(max: number = 30) {
 
 export interface RaceParams {
 	seed: number
-	horse: build.HorseDesc
+	horse: Omit<build.HorseDesc, 'mood'>
 	courseId: string
 	mood: rparams.Mood
 	groundCondition: rparams.GroundCondition
@@ -99,7 +102,7 @@ export interface RaceParams {
 		numUmas: number
 		popularity: number
 	}
-	paceEffectsEnabled: boolean
+	pacemakerCount: number
 	nsamples: number
 	presupposedSkills: string[]
 	skillsUnderTest: string[]
@@ -126,7 +129,7 @@ export function Race({maxSamples = 200, maxPreSkills = 30, maxSut = 30}: {maxSam
 			orderRange: hasOrder ? [start, start + length] as [number,number] : void 0,
 			popularity: Math.floor((start + length + extra) * pop) + 1
 		})),
-		paceEffectsEnabled: fc.boolean(),
+		pacemakerCount: fc.integer({min: 0, max: 3}),
 		nsamples: fc.integer({min: 1, max: maxSamples}),
 		presupposedSkills: SkillList(maxPreSkills),
 		skillsUnderTest: SkillList(maxSut)
@@ -136,7 +139,7 @@ export function Race({maxSamples = 200, maxPreSkills = 30, maxSut = 30}: {maxSam
 export function makeBuilder(params: RaceParams) {
 	const builder = new build.RaceSolverBuilder(params.nsamples)
 		.seed(params.seed)
-		.horse(params.horse)
+		.horse({...params.horse, mood: params.mood})
 		.course(+params.courseId)
 		.mood(params.mood)
 		.ground(params.groundCondition);
@@ -149,7 +152,7 @@ export function makeBuilder(params: RaceParams) {
 			builder.order(params.orderInfo.orderRange[0], params.orderInfo.orderRange[1]);
 		}
 	}
-	if (params.paceEffectsEnabled) {
+	if (params.pacemakerCount > 0) {
 		builder.useDefaultPacer();
 	}
 	builder.withAsiwotameru().withStaminaSyoubu();

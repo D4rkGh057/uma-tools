@@ -1,7 +1,9 @@
-import { HintInput, RaceContext } from './optimizer/types';
+import { findProfile } from './optimizer/profiles/catalog';
+import type { MetaProfileReference } from './optimizer/profiles/types';
+import type { EvaluationMode, HintInput, RaceContext } from './optimizer/types';
 
 export const OPTIMIZER_BUILD_STORAGE_KEY = 'skill_optimizer_build';
-const STORAGE_VERSION = 1;
+const STORAGE_VERSION = 2;
 
 export type EntryMode = 'roster' | 'manual';
 
@@ -26,9 +28,25 @@ export interface OptimizerBuildState {
 	hints: HintInput;
 }
 
-interface StoredOptimizerBuild extends OptimizerBuildState {
+interface StoredOptimizerBuildV1 extends OptimizerBuildState {
 	version: number;
 }
+
+interface StoredOptimizerBuildV2 extends StoredOptimizerBuildV1 {
+	mode: EvaluationMode;
+	profile?: MetaProfileReference;
+}
+
+export interface OptimizerBuildSelection {
+	readonly mode: EvaluationMode;
+	readonly profile?: MetaProfileReference;
+}
+
+export type OptimizerBuildLoadOutcome =
+	| { readonly status: 'empty'; readonly state: OptimizerBuildState; readonly selection: OptimizerBuildSelection }
+	| { readonly status: 'loaded'; readonly state: OptimizerBuildState; readonly selection: OptimizerBuildSelection }
+	| { readonly status: 'migrated'; readonly state: OptimizerBuildState; readonly selection: OptimizerBuildSelection }
+	| { readonly status: 'rejected'; readonly state: OptimizerBuildState; readonly reason: string };
 
 interface StorageLike {
 	getItem(key: string): string | null;
@@ -81,8 +99,8 @@ function isRaceContext(value: unknown): value is RaceContext | undefined {
 		&& (value.phase === undefined || [0, 1, 2, 3].includes(value.phase as number));
 }
 
-function isValidBuild(value: unknown): value is StoredOptimizerBuild {
-	if (!isRecord(value) || value.version !== STORAGE_VERSION || (value.entryMode !== 'roster' && value.entryMode !== 'manual')) return false;
+function isValidBuild(value: unknown): value is StoredOptimizerBuildV1 {
+	if (!isRecord(value) || (value.entryMode !== 'roster' && value.entryMode !== 'manual')) return false;
 	if (!isRecord(value.manualUma) || !STRATEGIES.has(value.manualUma.strategy as string)
 		|| !APTITUDES.has(value.manualUma.distanceAptitude as string)
 		|| !APTITUDES.has(value.manualUma.surfaceAptitude as string)
@@ -94,29 +112,52 @@ function isValidBuild(value: unknown): value is StoredOptimizerBuild {
 	return Object.values(value.hints).every(hint => Number.isInteger(hint) && (hint as number) >= 0 && (hint as number) <= 5);
 }
 
-export function loadOptimizerBuild(storage: StorageLike | null = browserStorage()): OptimizerBuildState {
-	if (!storage) return defaultOptimizerBuildState();
+function isSelection(value: unknown): value is OptimizerBuildSelection {
+	if (!isRecord(value) || !['Score', 'TeamTrials', 'ChampionsMeeting', 'LeagueOfHeroes'].includes(value.mode as string)) return false;
+	if (value.mode === 'ChampionsMeeting' || value.mode === 'LeagueOfHeroes') {
+		return isRecord(value.profile) && typeof value.profile.id === 'string' && typeof value.profile.version === 'string'
+			&& findProfile(value.profile as MetaProfileReference, value.mode) !== null;
+	}
+	return value.profile === undefined;
+}
+
+function copyBuild(stored: StoredOptimizerBuildV1): OptimizerBuildState {
+	return {
+		entryMode: stored.entryMode,
+		manualUma: { ...stored.manualUma, ownedSkills: stored.manualUma.ownedSkills.map(skill => ({ ...skill })) },
+		budget: stored.budget,
+		...(stored.raceContext ? { raceContext: { ...stored.raceContext } } : {}),
+		hints: { ...stored.hints },
+	};
+}
+
+const defaultSelection: OptimizerBuildSelection = { mode: 'Score' };
+
+export function loadOptimizerBuildOutcome(storage: StorageLike | null = browserStorage()): OptimizerBuildLoadOutcome {
+	const fallback = defaultOptimizerBuildState();
+	if (!storage) return { status: 'empty', state: fallback, selection: defaultSelection };
 	try {
 		const raw = storage.getItem(OPTIMIZER_BUILD_STORAGE_KEY);
-		if (!raw) return defaultOptimizerBuildState();
+		if (!raw) return { status: 'empty', state: fallback, selection: defaultSelection };
 		const stored: unknown = JSON.parse(raw);
-		if (!isValidBuild(stored)) return defaultOptimizerBuildState();
-		return {
-			entryMode: stored.entryMode,
-			manualUma: { ...stored.manualUma, ownedSkills: stored.manualUma.ownedSkills.map(skill => ({ ...skill })) },
-			budget: stored.budget,
-			raceContext: stored.raceContext ? { ...stored.raceContext } : undefined,
-			hints: { ...stored.hints },
-		};
+		if (!isValidBuild(stored)) return { status: 'rejected', state: fallback, reason: 'Invalid persisted build' };
+		if (stored.version === 1) return { status: 'migrated', state: copyBuild(stored), selection: defaultSelection };
+		if (stored.version !== STORAGE_VERSION || !isSelection(stored)) return { status: 'rejected', state: fallback, reason: 'Unsupported persistence version or selection' };
+		return { status: 'loaded', state: copyBuild(stored), selection: { mode: stored.mode, ...(stored.profile ? { profile: { ...stored.profile } } : {}) } };
 	} catch {
-		return defaultOptimizerBuildState();
+		return { status: 'rejected', state: fallback, reason: 'Invalid persisted build' };
 	}
 }
 
-export function saveOptimizerBuild(state: OptimizerBuildState, storage: StorageLike | null = browserStorage()) {
+export function loadOptimizerBuild(storage: StorageLike | null = browserStorage()): OptimizerBuildState {
+	return loadOptimizerBuildOutcome(storage).state;
+}
+
+export function saveOptimizerBuild(state: OptimizerBuildState, storage: StorageLike | null = browserStorage(), selection: OptimizerBuildSelection = defaultSelection) {
 	if (!storage) return;
 	try {
-		storage.setItem(OPTIMIZER_BUILD_STORAGE_KEY, JSON.stringify({ version: STORAGE_VERSION, ...state }));
+		const safeSelection = isSelection(selection) ? selection : defaultSelection;
+		storage.setItem(OPTIMIZER_BUILD_STORAGE_KEY, JSON.stringify({ version: STORAGE_VERSION, ...state, ...safeSelection }));
 	} catch {
 		// Persistence is optional: private browsing and quota errors must not affect optimization.
 	}

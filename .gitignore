@@ -1,1 +1,6 @@
 node_modules/
+.atl/
+.codegraph/
+skill-optimizer-global/.test-bundle/
+skill-optimizer-global/bundle.js
+skill-optimizer-global/bundle.css

@@ -6,6 +6,8 @@ import { program, Option } from 'commander';
 import { makeBuilder } from '../arb/Race';
 import { RaceSolver } from '../../RaceSolver';
 import { Rule30CARng } from '../../Random';
+import { CheckpointCase, normalizeCheckpoint, NormalizedCheckpointCase, validateCheckpoint } from './checkpoint-schema';
+import { DefaultCheckpointSampleCount, parseCheckpointSampleCount, selectCheckpointSamples } from './checkpoint-samples';
 
 // This is more or less arbitrary but results in basically the level of precision we care about for the sim results.
 const Epsilon = 5e11 * Number.EPSILON;
@@ -37,10 +39,11 @@ function getLatestCheckpoint() {
 
 program
 	.argument('[cases]', 'JSON file of test cases')
-	.option('--fast', 'tests a random sample of cases instead of the entire set')
-	.addOption(new Option('--seed <number>', 'seed to use for random shuffle with --fast')
-		.implies({fast: true})
-		.default(Math.floor(Math.random() * (-1 >>> 0)) >>> 0)
+	.addOption(new Option('-n, --samples <number>', 'checkpoint cases to replay: 16 preflight, 256 development, 2000 CI/rebaseline, or 10000 full')
+		.default(DefaultCheckpointSampleCount)
+		.argParser(parseCheckpointSampleCount))
+	.addOption(new Option('--seed <number>', 'seed to use for deterministic sample selection')
+		.default(0)
 		.argParser(n => parseInt(n,10) >>> 0))
 	.option('-l, --failure-log <file>', 'file to log failing cases to', 'failures.json');
 
@@ -48,49 +51,89 @@ program.parse();
 const options = program.opts();
 
 const casefile = program.args.length > 0 ? program.args[0] : getLatestCheckpoint();
-let cases = JSON.parse(fs.readFileSync(casefile, 'utf-8'));
+const checkpointCases: NormalizedCheckpointCase[] = JSON.parse(fs.readFileSync(casefile, 'utf-8'))
+	.map((testCase: CheckpointCase) => normalizeCheckpoint(testCase));
+checkpointCases.forEach(validateCheckpoint);
+const cases = selectCheckpointSamples(checkpointCases, options.samples, options.seed);
 
-if (options.fast) {
-	const rng = new Rule30CARng(options.seed);
-	for (let i = cases.length; --i >= 0;) {
-		const j = rng.uniform(i + 1);
-		[cases[i], cases[j]] = [cases[j], cases[i]];
-	}
-	cases = cases.slice(0,100);
-}
+console.log('checkpoint samples: ' + cases.length + ' (seed: ' + options.seed + ')');
 
 test('should give results similar to the checkpoint', t => {
-	t.plan(cases.length + cases.reduce((a,b) => a + b.params.nsamples * +!b.result.err, 0));
+	t.plan(cases.length + cases.reduce((a,b) => a + b.case.result.gain.length, 0));
 
 	const failures = [];
-	cases.forEach(testCase => {
+	cases.forEach(normalized => {
+		const testCase = normalized.case;
 		const standard = makeBuilder(testCase.params);
 		const compare = standard.fork();
 		testCase.params.skillsUnderTest.forEach(id => compare.addSkill(id));
+		if (normalized.legacyPaceEffectsEnabled) standard.useDefaultPacer();
+		const pacemakerCount = testCase.params.pacemakerCount;
+		const pacerHorse = pacemakerCount > 0 ? standard.useDefaultPacer() : null;
 		const g1 = compare.build();
 		const g2 = standard.build();
+		const basePacerRng = new Rule30CARng(testCase.params.seed + 1);
 		let err = false;
-		for (let i = 0; i < testCase.params.nsamples; ++i) {
+		for (let i = 0; i < testCase.result.gain.length; ++i) {
 			try {
-				const s1 = g1.next().value as RaceSolver;
-				const s2 = g2.next().value as RaceSolver;
+				const compareSolver = g1.next().value as RaceSolver;
+				const standardSolver = g2.next().value as RaceSolver;
+				let gain: number;
+				if (normalized.lifecycle == 'pacer-aware') {
+					const pacers = Array.from({length: pacemakerCount}, () =>
+						pacerHorse != null ? standard.buildPacer(pacerHorse, i, new Rule30CARng(basePacerRng.int32())) : null
+					);
+					const pacer = pacers[0] || null;
 
-				while (s1.pos < standard._course.distance) {
-					s1.step(testCase.timestep);
+					standardSolver.initUmas([compareSolver, ...pacers]);
+					compareSolver.initUmas([standardSolver, ...pacers]);
+					pacers.forEach(p => p?.initUmas([standardSolver, compareSolver, ...pacers.filter(p2 => p2 !== p)]));
+
+					let standardFinished = false;
+					let compareFinished = false;
+					while (!standardFinished || !compareFinished) {
+						if (pacer) {
+							const currentPacer = pacer.getPacer();
+							pacer.umas.forEach(uma => uma.updatePacer(currentPacer));
+						}
+
+						pacers.forEach(p => {
+							if (p && p.pos < standard._course.distance) p.step(testCase.timestep);
+						});
+
+						if (compareSolver.pos < standard._course.distance) compareSolver.step(testCase.timestep);
+						else compareFinished = true;
+						if (standardSolver.pos < standard._course.distance) standardSolver.step(testCase.timestep);
+						else standardFinished = true;
+					}
+
+					pacers.forEach(p => {
+						if (p && p.pos < standard._course.distance) p.step(testCase.timestep);
+					});
+					compareSolver.cleanup();
+					standardSolver.cleanup();
+					gain = compareSolver.pos - standardSolver.pos;
+				} else {
+					while (compareSolver.pos < standard._course.distance) {
+						compareSolver.step(testCase.timestep);
+					}
+
+					while (standardSolver.accumulatetime.t < compareSolver.accumulatetime.t) {
+						standardSolver.step(testCase.timestep);
+					}
+					gain = compareSolver.pos - standardSolver.pos;
 				}
-
-				while (s2.accumulatetime.t < s1.accumulatetime.t) {
-					s2.step(testCase.timestep);
-				}
-
-				if (almostEqual(s1.pos - s2.pos, testCase.result.gain[i])) {
+				if (almostEqual(gain, testCase.result.gain[i])) {
 					t.ok(true);
 				} else {
-					(t as any).almostEqual(s1.pos - s2.pos, testCase.result.gain[i]);
-					failures.push({params: testCase.params, caseIdx: (t as any).assertCount - 1, sampleIdx: i, expected: testCase.result.gain[i], actual: s1.pos - s2.pos});
+					(t as any).almostEqual(gain, testCase.result.gain[i]);
+					failures.push({params: testCase.params, caseIdx: (t as any).assertCount - 1, sampleIdx: i, expected: testCase.result.gain[i], actual: gain});
 				}
 			} catch (_) {
 				err = true;
+				for (; i < testCase.result.gain.length; ++i) {
+					t.fail('expected sample was not produced');
+				}
 				break;
 			}
 		}
