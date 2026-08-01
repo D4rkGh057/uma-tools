@@ -4,3 +4,27 @@ node_modules/
 skill-optimizer-global/.test-bundle/
 skill-optimizer-global/bundle.js
 skill-optimizer-global/bundle.css
+umalator-global/bundle.js
+umalator-global/bundle.css
+umalator-global/simulator.worker.js
+
+# Engram memory cache
+.engram/
+
+# Build outputs (generic, per-package bundlers may add their own explicit entries above)
+dist/
+build/
+out/
+*.map
+
+# Test / coverage artifacts
+coverage/
+tmp/
+
+# Tool & environment caches
+.cache/
+.turbo/
+
+# OS / editor cruft
+.DS_Store
+*.log
