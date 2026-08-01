@@ -11,6 +11,9 @@ importers:
       '@floating-ui/dom':
         specifier: ^1.7.2
         version: 1.8.0
+      accessible-autocomplete:
+        specifier: ^3.0.1
+        version: 3.0.1(preact@10.29.7)
       d3:
         specifier: ^7.9.0
         version: 7.9.0
@@ -284,6 +287,14 @@ packages:
 
   '@types/trusted-types@2.0.7':
     resolution: {integrity: sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==}
+
+  accessible-autocomplete@3.0.1:
+    resolution: {integrity: sha512-xMshgc2LT5addvvfCTGzIkRrvhbOFeylFSnSMfS/PdjvvvElZkakCwxO3/yJYBWyi1hi3tZloqOJQ5kqqJtH4g==}
+    peerDependencies:
+      preact: ^8.0.0
+    peerDependenciesMeta:
+      preact:
+        optional: true
 
   acorn-walk@8.3.5:
     resolution: {integrity: sha512-HEHNfbars9v4pgpW6SO1KSPkfoS0xVOM/9UzkJltjlsHZmJasxg8aXkuZa7SMf8vKGIBhpUsPluQSqhJFCqebw==}
@@ -1387,6 +1398,10 @@ snapshots:
 
   '@types/trusted-types@2.0.7':
     optional: true
+
+  accessible-autocomplete@3.0.1(preact@10.29.7):
+    optionalDependencies:
+      preact: 10.29.7
 
   acorn-walk@8.3.5:
     dependencies:
