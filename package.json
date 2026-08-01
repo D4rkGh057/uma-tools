@@ -6,10 +6,10 @@
   "scripts": {
     "dev:umalator": "cd umalator-global && node build.mjs --serve 8000",
     "dev:skill-optimizer": "cd skill-optimizer-global && node build.mjs --serve 8123",
-    "dev": "(npm run dev:umalator &) && (npm run dev:skill-optimizer &)",
+    "dev": "(pnpm run dev:umalator &) && (pnpm run dev:skill-optimizer &)",
     "test:skill-optimizer": "node skill-optimizer-global/test.mjs",
-    "test:uma-skill-tools": "npm --prefix uma-skill-tools test",
-    "test": "npm run test:skill-optimizer && npm run test:uma-skill-tools"
+    "test:uma-skill-tools": "pnpm --filter ./uma-skill-tools test",
+    "test": "pnpm run test:skill-optimizer && pnpm run test:uma-skill-tools"
   },
   "author": "pecan",
   "license": "GPL-3.0-or-later",

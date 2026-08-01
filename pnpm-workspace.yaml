@@ -1,0 +1,9 @@
+packages:
+  - uma-skill-tools
+
+allowBuilds:
+  core-js: false
+  esbuild: true
+
+onlyBuiltDependencies:
+  - esbuild
