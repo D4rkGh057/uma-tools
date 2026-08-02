@@ -164,7 +164,8 @@
 }
 
 #skillOptimizer .optimizer-results .result-section { background: var(--optimizer-surface); border: 1px solid var(--optimizer-border); border-radius: var(--optimizer-radius); padding: 0.75rem 1rem; }
-#skillOptimizer .optimizer-results .result-section ~ .result-section { margin-top: 0.75rem; }
+#skillOptimizer .optimizer-results .result-section ~ .result-section,
+#skillOptimizer .optimizer-results .result-columns ~ .result-section { margin-top: 0.75rem; }
 .result-section > .result-table-overflow:last-child { margin-bottom: 0; }
 .result-section .result-breakdown-group:last-child { margin-bottom: 0; }
 
@@ -280,6 +281,23 @@
 	#skillOptimizer .race-context-fields { grid-template-columns: 1fr; }
 	#skillOptimizer .race-context { width: 100%; }
 	#skillOptimizer .optimizer-results .result-section { padding: 0.5rem; }
+}
+
+@media (min-width: 1520px) {
+	#skillOptimizer .optimizer-results {
+		--optimizer-results-w: min(1360px, 100vw - 3rem);
+		box-sizing: border-box;
+		width: var(--optimizer-results-w);
+		margin-inline: calc((900px - var(--optimizer-results-w)) / 2);
+	}
+	#skillOptimizer .optimizer-results .result-columns {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0.75rem;
+		align-items: start;
+	}
+	#skillOptimizer .optimizer-results .result-columns > .result-section ~ .result-section { margin-top: 0; }
+	#skillOptimizer .optimizer-results .result-columns > .result-section:only-child { grid-column: 1 / -1; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -278,6 +278,72 @@ test('ResultPanel renders exactly one result-section card when only picks have c
 	assert.equal(container.querySelector('.result-breakdown'), null);
 });
 
+// Closes spec scenario "Picks and situational both present at wide viewport" (skill-optimizer-results-columns
+// delta): picks and situational must share one `.result-columns` pairing wrapper so the wide-viewport CSS grid
+// can lay them out side by side, while the developer breakdown -- rendered after the wrapper, outside it --
+// must never become a grid child.
+test('ResultPanel wraps picks and situational sections in a shared .result-columns pairing container', () => {
+	const result: ReadyEvaluationResult = {
+		status: 'ready', mode: 'Score',
+		purchase: {
+			totalCost: 500, totalScore: 5,
+			picks: [{ groupId: 'columns-pick-group', targetIdx: 0, skillId: 'columns-pick-skill', cost: 300, score: 3, steps: [] }],
+			situational: [{ groupId: 'columns-situational-group', skillId: 'columns-situational-skill', cost: 200, reason: 'Positioning' }],
+		},
+		breakdown: [],
+	};
+	const container = renderToContainer(h(ResultPanel, { input: null, plan: null, result }));
+
+	const columns = container.querySelector('.result-columns');
+	assert.ok(columns, 'expected a .result-columns wrapper around picks and situational');
+	assert.equal(columns!.children.length, 2);
+	assert.ok(columns!.querySelector('.result-section-picks'), 'expected the picks section inside .result-columns');
+	assert.ok(columns!.querySelector('.result-situational'), 'expected the situational section inside .result-columns');
+	assert.equal(columns!.querySelector('.result-breakdown'), null, 'the developer breakdown must never be a child of .result-columns');
+});
+
+// Closes spec scenario "Only picks present at wide viewport": when situational has no content, the wrapper
+// must hold exactly the picks section and no empty second child, so the `:only-child` CSS rule can span it
+// across both grid tracks without an empty cell appearing beside it.
+test('ResultPanel keeps .result-columns to a single child when situational is absent', () => {
+	const result: ReadyEvaluationResult = {
+		status: 'ready', mode: 'Score',
+		purchase: {
+			totalCost: 200, totalScore: 2,
+			picks: [{ groupId: 'columns-lone-pick-group', targetIdx: 0, skillId: 'columns-lone-pick-skill', cost: 200, score: 2, steps: [] }],
+			situational: [],
+		},
+		breakdown: [],
+	};
+	const container = renderToContainer(h(ResultPanel, { input: null, plan: null, result }));
+
+	const columns = container.querySelector('.result-columns');
+	assert.ok(columns, 'expected a .result-columns wrapper even when only picks are present');
+	assert.equal(columns!.children.length, 1);
+	assert.ok(columns!.querySelector('.result-section-picks'));
+});
+
+// Closes spec scenarios "Wide-Viewport Two-Column Arrangement", "Results Container Widening Scoped to
+// Breakpoint", and "Consistent Inter-Section Spacing" (skill-optimizer-results-columns delta): reads `app.css`
+// as text per the established convention (`appPresentation.test.ts:116`, `presentationSemantics.test.ts:146`),
+// since linkedom provides no CSS cascade or layout to assert against.
+test('app.css defines a wide-viewport two-column grid for .result-columns and repairs sibling spacing for the wrapper', () => {
+	const css = readFileSync(resolve(process.cwd(), 'skill-optimizer-global/app.css'), 'utf8');
+
+	assert.match(
+		css,
+		/#skillOptimizer \.optimizer-results \.result-section ~ \.result-section,\s*\n#skillOptimizer \.optimizer-results \.result-columns ~ \.result-section \{ margin-top: 0\.75rem; \}/,
+		'expected the base sibling-spacing selector list to also cover .result-columns ~ .result-section',
+	);
+
+	const mediaMatch = css.match(/@media \(min-width: 1520px\) \{([\s\S]*?)\n\}/);
+	assert.ok(mediaMatch, 'expected a @media (min-width: 1520px) block');
+	const mediaBlock = mediaMatch![1];
+	assert.match(mediaBlock, /repeat\(2, minmax\(0, 1fr\)\)/, 'expected the two-column grid track definition');
+	assert.match(mediaBlock, /align-items: start/, 'expected align-items: start to prevent equal-height stretch');
+	assert.match(mediaBlock, /margin-inline/, 'expected margin-inline to widen .optimizer-results without affecting margin-bottom');
+});
+
 // ResultPanel itself calls `useState` (for the dev breakdown toggle), so it cannot be invoked as a bare
 // function here -- it needs a real Preact render, which needs a DOM this Node harness does not have.
 // Its ready/empty/retained message content is exercised above through the real
