@@ -108,7 +108,7 @@ export function ResultPanel({ input, plan, result, state }: ResultPanelProps) {
 									<tbody>
 										{g.candidates.map(c => (
 											<tr key={c.skillId} class={c.excluded ? 'result-breakdown-excluded' : ''}>
-												<td>{c.name}</td>
+												<td>{getSkillName(c.skillId)}</td>
 												<td>{c.cost}</td>
 												<td>{c.score.toFixed(3)}</td>
 												<td>{c.picked ? 'yes' : ''}</td>
