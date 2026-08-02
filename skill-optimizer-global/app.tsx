@@ -117,40 +117,49 @@ export function App({ evaluator = evaluate }: AppProps) {
 				<button type="button" class="optimizer-reset" onClick={resetBuild}>Reset build</button>
 			</header>
 			<main class="optimizer-workflow" aria-labelledby="optimizer-title">
-			<section class="optimizer-section" aria-labelledby="step-1-heading">
-				<h2 id="step-1-heading">1. Select uma</h2>
-				<UmaSelect
-					key={resetKey}
-					onSelect={setSelection}
-					entryMode={entryMode}
-					manualState={manualState}
-					onEntryModeChange={setEntryMode}
-					onManualChange={(state, input) => { setManualState(state); setSelection(input); }}
-				/>
-			</section>
-			<section class="optimizer-section" aria-labelledby="step-2-heading">
-				<h2 id="step-2-heading">2. Budget &amp; target race</h2>
-				<BudgetRaceInputs value={budgetRace} onChange={setBudgetRace} />
-			</section>
-			<section class="optimizer-section" aria-labelledby="step-3-heading">
-				<h2 id="step-3-heading">3. Hint levels</h2>
-				<HintTable hints={hints} onChange={setHints} />
-			</section>
-			<section class="optimizer-section" aria-labelledby="step-4-heading">
-				<h2 id="step-4-heading">4. Evaluation mode</h2>
-				<ModeSelector mode={mode} onChange={changeMode} />
-				<MetaMatchupPanel result={metaResult} />
-			</section>
-			<section class="optimizer-section optimizer-action" aria-labelledby="step-5-heading">
-				<h2 id="step-5-heading">5. Optimize</h2>
-				<button type="button" class="optimizer-submit" disabled={!optimizeInput} onClick={runOptimize}>
-					Optimize build
-				</button>
-			</section>
-			<section class="optimizer-results" aria-labelledby="results-heading" aria-live="polite">
-				<h2 id="results-heading">Results</h2>
-				<ResultPanel input={optimizeInput} plan={result?.status === 'ready' ? result.purchase : null} result={result} state={state} />
-			</section>
+				<div class="optimizer-stages">
+					<div class="optimizer-stage-group">
+						<section class="optimizer-section" aria-labelledby="step-1-heading">
+							<h2 id="step-1-heading">1. Select uma</h2>
+							<UmaSelect
+								key={resetKey}
+								onSelect={setSelection}
+								entryMode={entryMode}
+								manualState={manualState}
+								onEntryModeChange={setEntryMode}
+								onManualChange={(state, input) => { setManualState(state); setSelection(input); }}
+							/>
+						</section>
+						<section class="optimizer-section" aria-labelledby="step-2-heading">
+							<h2 id="step-2-heading">2. Budget &amp; target race</h2>
+							<BudgetRaceInputs value={budgetRace} onChange={setBudgetRace} />
+						</section>
+					</div>
+					<div class="optimizer-stage-group">
+						<section class="optimizer-section" aria-labelledby="step-3-heading">
+							<h2 id="step-3-heading">3. Hint levels</h2>
+							<HintTable hints={hints} onChange={setHints} />
+						</section>
+						<section class="optimizer-section" aria-labelledby="step-4-heading">
+							<h2 id="step-4-heading">4. Evaluation mode</h2>
+							<ModeSelector mode={mode} onChange={changeMode} />
+							<MetaMatchupPanel result={metaResult} />
+						</section>
+					</div>
+					<div class="optimizer-output-group">
+						<section class="optimizer-section optimizer-action" aria-labelledby="step-5-heading">
+							<h2 id="step-5-heading">5. Optimize</h2>
+							<button type="button" class="optimizer-submit" disabled={!optimizeInput} onClick={runOptimize}>
+								Optimize build
+							</button>
+						</section>
+						<section class="optimizer-results" aria-labelledby="results-heading" aria-describedby="results-help" aria-live="polite">
+							<h2 id="results-heading">Results</h2>
+							<p id="results-help">Results update only when you choose Optimize. A visible result may be from an earlier run.</p>
+							<ResultPanel input={optimizeInput} plan={result?.status === 'ready' ? result.purchase : null} result={result} state={state} />
+						</section>
+					</div>
+				</div>
 			</main>
 		</div>
 	);

@@ -157,6 +157,60 @@ test('editable budget, hint, and mode controls expose grouped labels and respons
 	assert.match(css, /@media \(max-width: 768px\)[\s\S]*\.race-context-fields/);
 });
 
+// Closes design "Skill Optimizer Three-Column Results Layout": the dirty two-column 960px baseline
+// (single `.optimizer-stages` grid of five direct `.optimizer-section` children) is replaced by three
+// DOM-ordered layout-only groups -- `.optimizer-stage-group` x2 (steps 1-2, 3-4) and one
+// `.optimizer-output-group` (step 5 + Results) -- at a `min-width: 1100px` `1fr 1fr 2fr` grid, with the
+// shell widened and capped at 1520px and Results sized relative to that shell instead of a hard-coded
+// 900px assumption. This is a structural source-pattern test over exactly one production file per
+// side (app.tsx / app.css) with no branching input -- triangulation is skipped per strict-tdd's
+// "purely structural, one possible output" allowance, same as the sibling source-assertion tests above.
+test('optimizer workflow defines ordered three-zone stage groups and a shell-relative retained-results zone', () => {
+	const app = source('app.tsx');
+	const css = source('app.css');
+
+	// DOM/tab order 1 -> 2 -> 3 -> 4 -> 5 -> Results must survive the new group nesting.
+	assert.match(
+		app,
+		/<div class="optimizer-stages">\s*<div class="optimizer-stage-group">[\s\S]*aria-labelledby="step-1-heading"[\s\S]*aria-labelledby="step-2-heading"[\s\S]*<\/div>\s*<div class="optimizer-stage-group">[\s\S]*aria-labelledby="step-3-heading"[\s\S]*aria-labelledby="step-4-heading"[\s\S]*<\/div>\s*<div class="optimizer-output-group">[\s\S]*aria-labelledby="step-5-heading"[\s\S]*<section class="optimizer-results"[\s\S]*aria-labelledby="results-heading"[\s\S]*<\/section>\s*<\/div>\s*<\/div>/,
+	);
+	assert.match(app, /<p id="results-help">Results update only when you choose Optimize\. A visible result may be from an earlier run\.<\/p>/);
+	assert.match(app, /<section class="optimizer-results"[^>]*aria-describedby="results-help"/);
+
+	// Wide-desktop three-zone grid + widened/capped shell.
+	assert.match(css, /@media \(min-width: 1100px\)\s*\{[\s\S]*#app\s*\{[\s\S]*max-width:\s*1520px/);
+	assert.match(css, /@media \(min-width: 1100px\)\s*\{[\s\S]*\.optimizer-stages\s*\{[\s\S]*display:\s*grid;[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) minmax\(0, 1fr\) minmax\(0, 2fr\)/);
+	assert.match(css, /@media \(min-width: 1100px\)\s*\{[\s\S]*\.optimizer-results\s*\{[\s\S]*width:\s*100%;[\s\S]*min-width:\s*0/);
+
+	// The dirty two-column baseline's breakpoint and the old 900px Results-margin coupling are gone.
+	assert.doesNotMatch(css, /@media \(min-width: 960px\)/);
+	assert.doesNotMatch(css, /calc\(\(900px/);
+
+	// No visual reordering via order/sticky/fixed on any group or the compacted action card.
+	assert.doesNotMatch(css, /\.optimizer-stage-group\s*\{[^}]*\b(?:order|position:\s*(?:sticky|fixed))\b/);
+	assert.doesNotMatch(css, /\.optimizer-output-group\s*\{[^}]*\b(?:order|position:\s*(?:sticky|fixed))\b/);
+	assert.doesNotMatch(css, /\.optimizer-action\s*\{[^}]*\b(?:order|position:\s*(?:sticky|fixed))\b/);
+});
+
+// Corrective fix for a CRITICAL sdd-verify finding on this same change: `.optimizer-results` gets
+// `width: 100%; min-width: 0` inside the `@media (min-width: 1100px)` block (task 1.3), but shares its
+// `padding: 1rem` + `border: 1px solid ...` with `.optimizer-section` in the base (non-media) rule below.
+// Real Chromium measurement found 1-4px of real page-level horizontal overflow at 1100px-~1290px because
+// the box defaulted to `box-sizing: content-box`, so that 34px of padding+border rendered ON TOP OF the
+// 100%-width content box instead of being included in it. Asserting `box-sizing: border-box` on the
+// shared rule (covering both `.optimizer-section` and `.optimizer-results`) closes this whole bug class,
+// not just the one instance sdd-verify found -- a source-pattern regression guard, same pattern as the
+// sibling structural assertions above; the real-browser proof lives in this apply batch's evidence, not
+// in this repo's test harness (no visual-layout/E2E engine here, per design's Testing Strategy).
+test('optimizer section and results containers use border-box sizing so 100%-width does not overflow their padded/bordered box', () => {
+	const css = source('app.css');
+
+	assert.match(
+		css,
+		/#skillOptimizer \.optimizer-section,\s*#skillOptimizer \.optimizer-results\s*\{\s*box-sizing:\s*border-box;/,
+	);
+});
+
 // ModeSelector has no hooks (see the comment above), so it is exercised the same way as the existing
 // "selects the active mode" test above: a bare function call plus a synthetic event object standing in
 // for a real DOM change event. Closes spec scenarios "Selected and unavailable choices" and "Supported

@@ -343,10 +343,16 @@ test('ResultPanel keeps .result-columns to a single child when situational is ab
 	assert.ok(columns!.querySelector('.result-section-picks'));
 });
 
-// Closes spec scenarios "Wide-Viewport Two-Column Arrangement", "Results Container Widening Scoped to
-// Breakpoint", and "Consistent Inter-Section Spacing" (skill-optimizer-results-columns delta): reads `app.css`
-// as text per the established convention (`appPresentation.test.ts:116`, `presentationSemantics.test.ts:146`),
-// since linkedom provides no CSS cascade or layout to assert against.
+// Closes spec scenarios "Wide-Viewport Two-Column Arrangement" and "Consistent Inter-Section Spacing"
+// (skill-optimizer-results-columns delta): reads `app.css` as text per the established convention
+// (`appPresentation.test.ts:116`, `presentationSemantics.test.ts:146`), since linkedom provides no CSS
+// cascade or layout to assert against.
+// The former "Results Container Widening Scoped to Breakpoint" scenario's `margin-inline`/900px-coupled
+// narrowing was superseded by `skill-optimizer-three-column-results-layout`: Results now sizes relative
+// to the widened/capped shell (`width: 100%; min-width: 0` at `min-width: 1100px`) instead of narrowing
+// itself independently at 1520px -- see presentationSemantics.test.ts's "shell-relative retained-results
+// zone" test for that coverage. This test keeps asserting the parts of the original scenario that are
+// still true: the sibling-spacing selector list and the `.result-columns` two-column subgrid itself.
 test('app.css defines a wide-viewport two-column grid for .result-columns and repairs sibling spacing for the wrapper', () => {
 	const css = readFileSync(resolve(process.cwd(), 'skill-optimizer-global/app.css'), 'utf8');
 
@@ -361,7 +367,7 @@ test('app.css defines a wide-viewport two-column grid for .result-columns and re
 	const mediaBlock = mediaMatch![1];
 	assert.match(mediaBlock, /repeat\(2, minmax\(0, 1fr\)\)/, 'expected the two-column grid track definition');
 	assert.match(mediaBlock, /align-items: start/, 'expected align-items: start to prevent equal-height stretch');
-	assert.match(mediaBlock, /margin-inline/, 'expected margin-inline to widen .optimizer-results without affecting margin-bottom');
+	assert.doesNotMatch(mediaBlock, /margin-inline/, 'expected the superseded 900px-coupled margin-inline narrowing to be gone');
 });
 
 test('app.css scopes separated recommended-purchase rows and their narrow-screen compaction to .result-picks', () => {
