@@ -143,6 +143,27 @@
 	font-size: 0.9em;
 }
 
+#skillOptimizer .result-picks {
+	border-collapse: separate;
+	border-spacing: 0 0.5rem;
+}
+
+#skillOptimizer .result-picks .result-pick td {
+	background: var(--optimizer-surface-muted);
+	border-top: 1px solid var(--optimizer-border);
+	border-bottom: 1px solid var(--optimizer-border);
+}
+
+#skillOptimizer .result-picks .result-pick td:first-child {
+	border-left: 3px solid var(--optimizer-accent);
+	border-radius: var(--optimizer-radius) 0 0 var(--optimizer-radius);
+}
+
+#skillOptimizer .result-picks .result-pick td:last-child {
+	border-right: 1px solid var(--optimizer-border);
+	border-radius: 0 var(--optimizer-radius) var(--optimizer-radius) 0;
+}
+
 .result-breakdown-toggle {
 	margin-top: 0.5em;
 }
@@ -281,6 +302,7 @@
 	#skillOptimizer .race-context-fields { grid-template-columns: 1fr; }
 	#skillOptimizer .race-context { width: 100%; }
 	#skillOptimizer .optimizer-results .result-section { padding: 0.5rem; }
+	#skillOptimizer .result-picks { border-spacing: 0 0.25rem; }
 }
 
 @media (min-width: 1520px) {

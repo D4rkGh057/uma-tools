@@ -62,7 +62,7 @@ export function ResultPanel({ input, plan, result, state }: ResultPanelProps) {
 								<thead><tr><th>Skill</th><th>Cost</th><th>Score</th><th>Steps</th></tr></thead>
 								<tbody>
 									{displayedPlan.picks.map(p => (
-										<tr key={`${p.groupId}-${p.targetIdx}`}>
+										<tr class="result-pick" key={`${p.groupId}-${p.targetIdx}`}>
 											<td>{getSkillName(p.skillId)}</td>
 											<td>{p.cost}</td>
 											<td>{p.score.toFixed(3)}</td>

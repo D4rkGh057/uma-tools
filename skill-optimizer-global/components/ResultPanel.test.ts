@@ -278,6 +278,26 @@ test('ResultPanel renders exactly one result-section card when only picks have c
 	assert.equal(container.querySelector('.result-breakdown'), null);
 });
 
+test('ResultPanel marks every recommended-purchase row as a result pick', () => {
+	const result: ReadyEvaluationResult = {
+		status: 'ready', mode: 'Score',
+		purchase: {
+			totalCost: 300, totalScore: 3,
+			picks: [
+				{ groupId: 'first-pick-group', targetIdx: 0, skillId: 'first-pick', cost: 100, score: 1, steps: [] },
+				{ groupId: 'second-pick-group', targetIdx: 1, skillId: 'second-pick', cost: 200, score: 2, steps: [] },
+			],
+			situational: [],
+		},
+		breakdown: [],
+	};
+	const container = renderToContainer(h(ResultPanel, { input: null, plan: null, result }));
+	const rows = Array.from(container.querySelectorAll('.result-picks tbody tr'));
+
+	assert.equal(rows.length, result.purchase.picks.length);
+	assert.ok(rows.every(row => row.classList.contains('result-pick')));
+});
+
 // Closes spec scenario "Picks and situational both present at wide viewport" (skill-optimizer-results-columns
 // delta): picks and situational must share one `.result-columns` pairing wrapper so the wide-viewport CSS grid
 // can lay them out side by side, while the developer breakdown -- rendered after the wrapper, outside it --
@@ -342,6 +362,23 @@ test('app.css defines a wide-viewport two-column grid for .result-columns and re
 	assert.match(mediaBlock, /repeat\(2, minmax\(0, 1fr\)\)/, 'expected the two-column grid track definition');
 	assert.match(mediaBlock, /align-items: start/, 'expected align-items: start to prevent equal-height stretch');
 	assert.match(mediaBlock, /margin-inline/, 'expected margin-inline to widen .optimizer-results without affecting margin-bottom');
+});
+
+test('app.css scopes separated recommended-purchase rows and their narrow-screen compaction to .result-picks', () => {
+	const css = readFileSync(resolve(process.cwd(), 'skill-optimizer-global/app.css'), 'utf8');
+	const picksRule = css.match(/#skillOptimizer \.result-picks\s*\{([\s\S]*?)\n\}/);
+	const pickCellsRule = css.match(/#skillOptimizer \.result-picks \.result-pick td\s*\{([\s\S]*?)\n\}/);
+	const narrowScreenRule = css.match(/@media \(max-width: 768px\) \{([\s\S]*?)\n\}/);
+
+	assert.ok(picksRule, 'expected a scoped recommended-purchases table rule');
+	assert.match(picksRule![1], /border-collapse:\s*separate/);
+	assert.match(picksRule![1], /border-spacing:\s*0\s+[^;]+/);
+	assert.ok(pickCellsRule, 'expected visual treatment on recommended-purchase cells');
+	assert.match(pickCellsRule![1], /background:/);
+	assert.match(pickCellsRule![1], /border-(?:top|bottom):/);
+	assert.ok(narrowScreenRule, 'expected a narrow-screen media rule');
+	assert.match(narrowScreenRule![1], /#skillOptimizer \.result-picks\s*\{\s*border-spacing:/);
+	assert.equal(Array.from(narrowScreenRule![1].matchAll(/border-spacing\s*:/g)).length, 1, 'only the recommended-purchases table should compact row spacing on narrow screens');
 });
 
 // ResultPanel itself calls `useState` (for the dev breakdown toggle), so it cannot be invoked as a bare
