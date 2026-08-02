@@ -26,10 +26,10 @@ const redirectData = makeRedirectData(datadir);
 const mockAssert = makeMockAssert(debug);
 
 const buildOptions = {
-	entryPoints: [{in: 'app.tsx', out: 'bundle'}],
+	entryPoints: [{in: path.join(dirname, 'app.tsx'), out: 'bundle'}],
 	bundle: true,
 	minify: !debug,
-	outdir: '.',
+	outdir: dirname,
 	write: !serve,
 	define: {CC_DEBUG: debug.toString(), CC_GLOBAL: 'true'},
 	external: ['*.ttf'],

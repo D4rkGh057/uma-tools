@@ -13,7 +13,7 @@ import { MetaMatchupPanel } from './components/MetaMatchupPanel';
 import { evaluate } from './optimizer/evaluation';
 import { profileCatalog } from './optimizer/profiles/catalog';
 import { MetaProfileReference } from './optimizer/profiles/types';
-import { EvaluationMode, EvaluationResult, HintInput, OptimizeInput } from './optimizer/types';
+import { EvaluationMode, EvaluationRequest, EvaluationResult, HintInput, OptimizeInput } from './optimizer/types';
 import { clearOptimizerBuild, defaultOptimizerBuildState, EntryMode, loadOptimizerBuildOutcome, ManualUmaState, OptimizerBuildSelection, saveOptimizerBuild } from './optimizerBuildStorage';
 import { ResultPanelState } from './components/resultPanelState';
 
@@ -21,7 +21,13 @@ import { ResultPanelState } from './components/resultPanelState';
 // via `ResultPanel`. `selection` converges both the roster-import and manual-entry paths into one
 // `UmaInput` shape (spec domain: manual-uma-entry, "Single Converged Uma Shape, No Silent Merge") --
 // see components/UmaSelect.tsx / components/umaInput.ts.
-function App() {
+type EvaluateFn = (request: EvaluationRequest) => EvaluationResult;
+
+export interface AppProps {
+	evaluator?: EvaluateFn;
+}
+
+export function App({ evaluator = evaluate }: AppProps) {
 	const initialLoad = useMemo(loadOptimizerBuildOutcome, []);
 	const initialBuild = initialLoad.state;
 	const initialSelection: OptimizerBuildSelection = initialLoad.status === 'rejected' ? { mode: 'Score' } : initialLoad.selection;
@@ -65,7 +71,7 @@ function App() {
 		const request = optimizeInput && ((mode === 'ChampionsMeeting' || mode === 'LeagueOfHeroes') && profile
 			? { ...optimizeInput, mode, profile }
 			: { ...optimizeInput, mode });
-		setResult(request ? evaluate(request) : null);
+		setResult(request ? evaluator(request) : null);
 		setState(null);
 	}
 
@@ -150,4 +156,5 @@ function App() {
 	);
 }
 
-render(<App />, document.getElementById('app'));
+const appRoot = typeof document === 'undefined' ? null : document.getElementById('app');
+if (appRoot) render(<App />, appRoot);
