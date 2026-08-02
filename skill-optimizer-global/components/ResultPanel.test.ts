@@ -234,6 +234,50 @@ test('ResultPanel retains evaluated purchases and situational content across dif
 	assert.doesNotMatch(container.textContent ?? '', /(?:fresh|stale|current inputs|matches current)/i);
 });
 
+test('ResultPanel renders three visually separated result-section cards when picks, situational, and revealed breakdown are all present', async () => {
+	const result: ReadyEvaluationResult = {
+		status: 'ready', mode: 'Score',
+		purchase: {
+			totalCost: 300, totalScore: 3,
+			picks: [{
+				groupId: 'section-pick-group', targetIdx: 0, skillId: 'section-pick-skill', cost: 200, score: 2,
+				steps: [{ skillId: 'section-step-skill', baseCost: 200, hint: 1, cost: 200 }],
+			}],
+			situational: [{ groupId: 'section-situational-group', skillId: 'section-situational-skill', cost: 100, reason: 'Positioning' }],
+		},
+		breakdown: [{
+			groupId: 'section-breakdown-group', ownedSkillId: null,
+			candidates: [{ skillId: 'section-breakdown-skill', cost: 50, score: 1, picked: true, excluded: false, exclusionReason: null }],
+		}],
+	};
+	const container = renderToContainer(h(ResultPanel, { input: null, plan: null, result }));
+
+	const toggle = container.querySelector('.result-breakdown-toggle');
+	const ClickEvent = (globalThis as any).window.Event;
+	await act(() => {
+		toggle!.dispatchEvent(new ClickEvent('click', { bubbles: true }));
+	});
+
+	assert.equal(container.querySelectorAll('.result-section').length, 3);
+});
+
+test('ResultPanel renders exactly one result-section card when only picks have content', () => {
+	const result: ReadyEvaluationResult = {
+		status: 'ready', mode: 'Score',
+		purchase: {
+			totalCost: 200, totalScore: 2,
+			picks: [{ groupId: 'lone-pick-group', targetIdx: 0, skillId: 'lone-pick-skill', cost: 200, score: 2, steps: [] }],
+			situational: [],
+		},
+		breakdown: [],
+	};
+	const container = renderToContainer(h(ResultPanel, { input: null, plan: null, result }));
+
+	assert.equal(container.querySelectorAll('.result-section').length, 1);
+	assert.equal(container.querySelector('.result-situational'), null);
+	assert.equal(container.querySelector('.result-breakdown'), null);
+});
+
 // ResultPanel itself calls `useState` (for the dev breakdown toggle), so it cannot be invoked as a bare
 // function here -- it needs a real Preact render, which needs a DOM this Node harness does not have.
 // Its ready/empty/retained message content is exercised above through the real

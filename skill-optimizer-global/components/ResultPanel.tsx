@@ -51,29 +51,31 @@ export function ResultPanel({ input, plan, result, state }: ResultPanelProps) {
 				<span>Total score: {displayedPlan.totalScore.toFixed(3)}</span>
 			</div>
 
-			{displayedPlan.picks.length === 0 && (
-				<div class="result-empty" role="status">No purchase improves the score within budget.</div>
-			)}
-			{displayedPlan.picks.length > 0 && (
-				<div class="result-table-overflow" aria-label="Recommended purchases" tabIndex={0}>
-					<table class="result-picks">
-						<thead><tr><th>Skill</th><th>Cost</th><th>Score</th><th>Steps</th></tr></thead>
-						<tbody>
-							{displayedPlan.picks.map(p => (
-								<tr key={`${p.groupId}-${p.targetIdx}`}>
-									<td>{getSkillName(p.skillId)}</td>
-									<td>{p.cost}</td>
-									<td>{p.score.toFixed(3)}</td>
-									<td>{p.steps.map(s => `${getSkillName(s.skillId)} (hint ${s.hint}, ${s.cost} SP)`).join(', ')}</td>
-								</tr>
-							))}
-						</tbody>
-					</table>
-				</div>
-			)}
+			<div class="result-section result-section-picks">
+				{displayedPlan.picks.length === 0 && (
+					<div class="result-empty" role="status">No purchase improves the score within budget.</div>
+				)}
+				{displayedPlan.picks.length > 0 && (
+					<div class="result-table-overflow" aria-label="Recommended purchases" tabIndex={0}>
+						<table class="result-picks">
+							<thead><tr><th>Skill</th><th>Cost</th><th>Score</th><th>Steps</th></tr></thead>
+							<tbody>
+								{displayedPlan.picks.map(p => (
+									<tr key={`${p.groupId}-${p.targetIdx}`}>
+										<td>{getSkillName(p.skillId)}</td>
+										<td>{p.cost}</td>
+										<td>{p.score.toFixed(3)}</td>
+										<td>{p.steps.map(s => `${getSkillName(s.skillId)} (hint ${s.hint}, ${s.cost} SP)`).join(', ')}</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
+				)}
+			</div>
 
 			{displayedPlan.situational.length > 0 && (
-				<div class="result-situational">
+				<div class="result-section result-situational">
 					<div class="result-situational-header">Situational (not scored)</div>
 					<div class="result-table-overflow" aria-label="Situational purchases" tabIndex={0}>
 						<table class="result-situational-table">
@@ -96,7 +98,7 @@ export function ResultPanel({ input, plan, result, state }: ResultPanelProps) {
 				{showBreakdown ? 'Hide' : 'Show'} dev breakdown
 			</button>
 			{breakdown && (
-				<div class="result-breakdown" id="result-breakdown">
+				<div class="result-section result-breakdown" id="result-breakdown">
 					{breakdown.filter(g => g.candidates.length > 0).map(g => (
 						<div class="result-breakdown-group" key={g.groupId}>
 							<div class="result-breakdown-group-header">

@@ -163,6 +163,11 @@
 	margin-bottom: 0.25em;
 }
 
+#skillOptimizer .optimizer-results .result-section { background: var(--optimizer-surface); border: 1px solid var(--optimizer-border); border-radius: var(--optimizer-radius); padding: 0.75rem 1rem; }
+#skillOptimizer .optimizer-results .result-section ~ .result-section { margin-top: 0.75rem; }
+.result-section > .result-table-overflow:last-child { margin-bottom: 0; }
+.result-section .result-breakdown-group:last-child { margin-bottom: 0; }
+
 .result-breakdown-excluded {
 	color: #b00;
 	opacity: 0.8;
@@ -274,6 +279,7 @@
 	#skillOptimizer .manual-uma-apts,
 	#skillOptimizer .race-context-fields { grid-template-columns: 1fr; }
 	#skillOptimizer .race-context { width: 100%; }
+	#skillOptimizer .optimizer-results .result-section { padding: 0.5rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
