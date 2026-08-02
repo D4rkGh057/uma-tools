@@ -147,7 +147,7 @@ test('editable budget, hint, and mode controls expose grouped labels and respons
 
 	assert.match(budgetRace, /<fieldset class="race-context">/);
 	assert.match(budgetRace, /<legend>Target race<\/legend>/);
-	assert.match(hints, /<caption>Skill hint levels<\/caption>/);
+	assert.match(hints, /<h3 class="hint-table-caption">Skill hint levels<\/h3>/);
 	assert.match(hints, /aria-label=\{`Hint level for \$\{getSkillName\(skillId\)\}`\}/);
 	assert.match(hints, /aria-label=\{`Remove hint for \$\{getSkillName\(skillId\)\}`\}/);
 	assert.match(mode, /aria-describedby="mode-help"/);
@@ -160,8 +160,9 @@ test('editable budget, hint, and mode controls expose grouped labels and respons
 // Closes design "Skill Optimizer Three-Column Results Layout": the dirty two-column 960px baseline
 // (single `.optimizer-stages` grid of five direct `.optimizer-section` children) is replaced by three
 // DOM-ordered layout-only groups -- `.optimizer-stage-group` x2 (steps 1-2, 3-4) and one
-// `.optimizer-output-group` (step 5 + Results) -- at a `min-width: 1100px` `1fr 1fr 2fr` grid, with the
-// shell widened and capped at 1520px and Results sized relative to that shell instead of a hard-coded
+// `.optimizer-output-group` (step 5 + Results) -- at a `min-width: 1100px` `1fr 1.4fr 2fr` grid (the
+// middle zone gets extra share so the Hint levels two-column card grid stays readable), with the
+// shell widened and capped at 1800px and Results sized relative to that shell instead of a hard-coded
 // 900px assumption. This is a structural source-pattern test over exactly one production file per
 // side (app.tsx / app.css) with no branching input -- triangulation is skipped per strict-tdd's
 // "purely structural, one possible output" allowance, same as the sibling source-assertion tests above.
@@ -178,8 +179,8 @@ test('optimizer workflow defines ordered three-zone stage groups and a shell-rel
 	assert.match(app, /<section class="optimizer-results"[^>]*aria-describedby="results-help"/);
 
 	// Wide-desktop three-zone grid + widened/capped shell.
-	assert.match(css, /@media \(min-width: 1100px\)\s*\{[\s\S]*#app\s*\{[\s\S]*max-width:\s*1520px/);
-	assert.match(css, /@media \(min-width: 1100px\)\s*\{[\s\S]*\.optimizer-stages\s*\{[\s\S]*display:\s*grid;[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) minmax\(0, 1fr\) minmax\(0, 2fr\)/);
+	assert.match(css, /@media \(min-width: 1100px\)\s*\{[\s\S]*#app\s*\{[\s\S]*max-width:\s*1800px/);
+	assert.match(css, /@media \(min-width: 1100px\)\s*\{[\s\S]*\.optimizer-stages\s*\{[\s\S]*display:\s*grid;[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) minmax\(0, 1\.4fr\) minmax\(0, 2fr\)/);
 	assert.match(css, /@media \(min-width: 1100px\)\s*\{[\s\S]*\.optimizer-results\s*\{[\s\S]*width:\s*100%;[\s\S]*min-width:\s*0/);
 
 	// The dirty two-column baseline's breakpoint and the old 900px Results-margin coupling are gone.

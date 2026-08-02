@@ -86,22 +86,128 @@
 	border-radius: 50%;
 }
 
-.hint-table-rows {
-	border-collapse: collapse;
-	margin-bottom: 0.5em;
+.hint-table-caption {
+	font-size: 1em;
+	margin: 0 0 0.5em;
 }
 
-.hint-table-rows td,
-.hint-table-rows th {
-	padding: 0.25em 0.5em;
-	text-align: left;
+.hint-card-list-overflow {
+	overflow-x: auto;
+	margin-bottom: 0.75em;
 }
 
-.hint-table-remove {
-	color: #b00;
+.hint-card-list {
+	display: grid;
+	font-size: 13px;
+	gap: 8px;
+	/* Fixed at 2 columns (not auto-fit) so the row count stays predictable regardless of how
+	   wide the "Hint levels" zone gets (SkillList.css's stock 300px/18em card only fit one
+	   column in the narrow zone and stacked into a very tall single-column list; auto-fit would
+	   pack 3+ per row once the zone was widened). minmax lets each card grow to fill its track --
+	   instead of a fixed px width -- so skill names get whatever room the zone's actual width has
+	   to give instead of being truncated to a number picked in isolation. The wrapper above still
+	   scrolls if a step panel narrower than the 140px floor ever clips it. */
+	grid-template-columns: repeat(2, minmax(150px, 1fr));
+	list-style-type: none;
+	margin: 0;
+	padding: 0;
+}
+
+.hint-card {
+	align-items: center;
+	border-radius: 8px;
+	border: 2px solid transparent;
+	box-shadow: 0 2px 0 rgb(180, 178, 192);
+	box-sizing: border-box;
+	display: flex;
+	height: 2.4em;
+	overflow: hidden;
+	padding: 6px;
+	width: 100%;
+}
+
+.hint-card-icon {
+	height: 1.6em;
+	width: 1.6em;
+	margin: 0 5px 0 0;
+	flex-shrink: 0;
+}
+
+.hint-card-name {
+	color: rgb(121, 64, 22);
+	display: block;
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	text-shadow: -1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white;
+	text-wrap: nowrap;
+}
+
+.hint-card-input-group {
+	align-items: center;
+	display: flex;
+	flex-shrink: 0;
+	margin: 0 2px;
+}
+
+.hint-card-input {
+	box-sizing: border-box;
+	flex-shrink: 0;
+	width: 2.2em;
+	height: 1.5em;
+	font-size: 0.8em;
+	text-align: center;
+	border-radius: 4px;
+	border: 1px solid rgb(180, 178, 192);
+	appearance: textfield;
+	-moz-appearance: textfield;
+}
+
+/* Same treatment as HorseDef.css's .horseStat inputs -- at this width the native spinner
+   overlaps the digit instead of leaving room for it. */
+.hint-card-input::-webkit-inner-spin-button,
+.hint-card-input::-webkit-outer-spin-button {
+	-webkit-appearance: none;
+	appearance: none;
+	margin: 0;
+}
+
+.hint-card-remove {
+	color: rgb(121, 64, 22);
 	background: none;
 	border: none;
 	cursor: pointer;
+	padding: 0 4px;
+	flex-shrink: 0;
+}
+
+/* Overrides the app-wide 44px touch-target minimum (#skillOptimizer input/button, app.css above) --
+   these controls live inside a fixed 3em-tall card, so the accessible minimum has to come from the
+   card's own tap area, not the individual pill/button inside it. */
+#skillOptimizer .hint-card-input,
+#skillOptimizer .hint-card-remove {
+	min-height: 0;
+}
+
+.hint-card-white {
+	background: linear-gradient(90deg, rgb(255, 243, 247), rgb(181, 178, 198)) padding-box,
+							linear-gradient(90deg, rgb(214, 207, 231), rgb(148, 150, 189)) border-box;
+}
+
+.hint-card-gold {
+	background: linear-gradient(90deg, rgb(255, 255, 239), rgb(255, 190, 40)) padding-box,
+							linear-gradient(90deg, rgb(255, 223, 115), rgb(255, 166, 16)) border-box;
+}
+
+.hint-card-pink {
+	background: linear-gradient(90deg, rgb(255, 238, 239), rgb(255, 155, 211)) padding-box,
+							linear-gradient(90deg, rgb(255, 142, 198), rgb(255, 89, 173)) border-box;
+}
+
+.hint-card-unique {
+	background: linear-gradient(90deg, rgb(239, 255, 214), rgb(161, 201, 248), rgb(170, 170, 255), rgb(255, 186, 231)) padding-box,
+							linear-gradient(90deg, rgb(197, 255, 190), rgb(189, 235, 255), rgb(195, 208, 255), rgb(255, 138, 222)) border-box;
 }
 
 .result-panel-empty,
@@ -228,6 +334,10 @@
 	box-shadow: var(--optimizer-shadow);
 	margin-bottom: 0.75rem;
 	padding: 1rem;
+	/* Grid items default to min-width: auto, which lets wide content (e.g. the fixed-width
+	   hint-card grid) force this section wider than its 1fr track instead of scrolling
+	   internally -- same fix .optimizer-results already needed for the same reason. */
+	min-width: 0;
 }
 
 #skillOptimizer .optimizer-section h2,
@@ -310,12 +420,14 @@
 @media (min-width: 1100px) {
 	#app {
 		width: 96%;
-		max-width: 1520px;
+		max-width: 1800px;
 	}
 
 	#skillOptimizer .optimizer-stages {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr);
+		/* Middle column (Hint levels / Evaluation mode) gets extra share so hint cards keep two
+		   readable columns instead of the zone being squeezed to the same width as step 1-2. */
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 2fr);
 		gap: 0.75rem;
 		align-items: start;
 	}
