@@ -30,13 +30,38 @@ export function rankForStat(x: number) {
 	}
 }
 
-export function Stat(props) {
+export interface StatProps {
+	label: string;
+	statIdx: number;
+	value: number | string;
+	tabindex?: number;
+	change(value: number): void;
+	/** Optional raw-validity seam (design decision "Optional raw-validity callback vs changing
+	 *  Stat.change"): reports whether the raw input string is non-empty, finite, and within 1..2000,
+	 *  BEFORE the existing `+raw` numeric coercion below. Omitting this prop is a no-op -- every
+	 *  existing shared caller (HorseDef.tsx) keeps working unchanged, and `change`'s numeric behavior
+	 *  is unaffected either way. */
+	onRawValidityChange?: (raw: string, valid: boolean) => void;
+}
+
+function isValidStatRaw(raw: string): boolean {
+	if (raw === '') return false;
+	const n = +raw;
+	return Number.isFinite(n) && n >= 1 && n <= 2000;
+}
+
+export function Stat(props: StatProps) {
+	function handleInput(e: { currentTarget: { value: string } }) {
+		const raw = e.currentTarget.value;
+		if (props.onRawValidityChange) props.onRawValidityChange(raw, isValidStatRaw(raw));
+		props.change(+raw);
+	}
 	return (
 		<div class="horseStat">
 			<span class="horseStatLabel">{props.label}</span>
 			<img class="horseStatIcon" src={`/uma-tools/icons/status_0${props.statIdx}.png`} />
 			<img class="horseStatRank" src={`/uma-tools/icons/statusrank/ui_statusrank_${(100 + rankForStat(props.value)).toString().slice(1)}.png`} />
-			<input type="number" min="1" max="2000" value={props.value} tabindex={props.tabindex} onInput={(e) => props.change(+e.currentTarget.value)} />
+			<input type="number" min="1" max="2000" value={props.value} tabindex={props.tabindex} onInput={handleInput} />
 		</div>
 	);
 }

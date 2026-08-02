@@ -41,9 +41,15 @@ function toManualForm(state: LocalState): ManualForm {
 	};
 }
 
+type StatField = 'speed' | 'stamina' | 'power' | 'guts' | 'wisdom';
+
 export function ManualUmaEntry({ initialState: savedState, onChange }: ManualUmaEntryProps) {
 	const [state, setState] = useState<LocalState>(() => ({ ...initialState(), ...savedState, ownedSkills: [...savedState.ownedSkills] }));
 	const [pickerOpen, setPickerOpen] = useState(false);
+	// Empty/non-finite/out-of-range raw input alerts (`role="alert"`) and clears once the same field
+	// later receives valid raw input, without changing the existing clamped numeric value below (spec:
+	// "Complete Control Presentation" -- "Invalid manual entry recovery").
+	const [invalidStats, setInvalidStats] = useState<ReadonlySet<StatField>>(new Set());
 
 	const candidateSkillIds = useMemo(() => Array.from(skillGroups.values()).flat(), []);
 
@@ -60,9 +66,19 @@ export function ManualUmaEntry({ initialState: savedState, onChange }: ManualUma
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
-	function statField(field: 'speed' | 'stamina' | 'power' | 'guts' | 'wisdom') {
+	function statField(field: StatField) {
 		return (raw: number) => commit({ [field]: clampStat(raw) } as Partial<LocalState>);
 	}
+
+	function statValidity(field: StatField) {
+		return (_raw: string, valid: boolean) => setInvalidStats(prev => {
+			if (valid === !prev.has(field)) return prev;
+			const next = new Set(prev);
+			if (valid) next.delete(field); else next.add(field);
+			return next;
+		});
+	}
+
 
 	function addSkill(skillId: string) {
 		const id = Number(skillId);
@@ -82,11 +98,16 @@ export function ManualUmaEntry({ initialState: savedState, onChange }: ManualUma
 		<div class="manual-uma-entry">
 			<fieldset class="manual-uma-stats">
 				<legend>Build stats</legend>
-				<Stat label="Speed" statIdx={0} value={state.speed ?? ''} change={statField('speed')} />
-				<Stat label="Stamina" statIdx={1} value={state.stamina ?? ''} change={statField('stamina')} />
-				<Stat label="Power" statIdx={2} value={state.power ?? ''} change={statField('power')} />
-				<Stat label="Guts" statIdx={3} value={state.guts ?? ''} change={statField('guts')} />
-				<Stat label="Wit" statIdx={4} value={state.wisdom ?? ''} change={statField('wisdom')} />
+				<Stat label="Speed" statIdx={0} value={state.speed ?? ''} change={statField('speed')} onRawValidityChange={statValidity('speed')} />
+				{invalidStats.has('speed') && <span role="alert" class="manual-uma-stat-alert">Speed must be a number between 1 and 2000.</span>}
+				<Stat label="Stamina" statIdx={1} value={state.stamina ?? ''} change={statField('stamina')} onRawValidityChange={statValidity('stamina')} />
+				{invalidStats.has('stamina') && <span role="alert" class="manual-uma-stat-alert">Stamina must be a number between 1 and 2000.</span>}
+				<Stat label="Power" statIdx={2} value={state.power ?? ''} change={statField('power')} onRawValidityChange={statValidity('power')} />
+				{invalidStats.has('power') && <span role="alert" class="manual-uma-stat-alert">Power must be a number between 1 and 2000.</span>}
+				<Stat label="Guts" statIdx={3} value={state.guts ?? ''} change={statField('guts')} onRawValidityChange={statValidity('guts')} />
+				{invalidStats.has('guts') && <span role="alert" class="manual-uma-stat-alert">Guts must be a number between 1 and 2000.</span>}
+				<Stat label="Wit" statIdx={4} value={state.wisdom ?? ''} change={statField('wisdom')} onRawValidityChange={statValidity('wisdom')} />
+				{invalidStats.has('wisdom') && <span role="alert" class="manual-uma-stat-alert">Wit must be a number between 1 and 2000.</span>}
 			</fieldset>
 			<fieldset class="manual-uma-apts">
 				<legend>Aptitudes</legend>
