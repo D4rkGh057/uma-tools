@@ -2,7 +2,7 @@
 // This module (and everything else under optimizer/) MUST NOT import preact, DOM, or any UI code
 // -- see design decision #6 (isolation = one-folder rollback + future unit-testability).
 
-import type { MetaArchetype, MetaAssumptions, MetaMode, MetaProfileReference, MetaProvenance, Observation, EvidenceScope } from './profiles/types';
+import type { MetaAssumptions, MetaCommunityGuidance, MetaMode, MetaProfileReference, MetaProvenance } from './profiles/types';
 
 /** Distance categories the game itself uses (see uma-skill-tools/CourseData.ts DistanceType). */
 export type DistanceBucket = 'Short' | 'Mile' | 'Mid' | 'Long';
@@ -149,14 +149,9 @@ export interface GroupBreakdown {
 	readonly candidates: readonly CandidateBreakdown[];
 }
 
-export type MatchupObservation =
-	| { readonly archetype: MetaArchetype; readonly status: 'ready'; readonly observation: Observation; readonly evidence: { readonly scope: EvidenceScope; readonly coverage: string; readonly reproduction: string; readonly simulatorVersion: string } }
-	| { readonly archetype: MetaArchetype; readonly status: 'unavailable'; readonly reason: string };
-
 export type MetaEvaluationResult = {
 	readonly status: 'ready'; readonly mode: MetaMode; readonly purchase: Readonly<Plan>; readonly breakdown: readonly GroupBreakdown[];
-	readonly profile: { readonly reference: MetaProfileReference; readonly provenance: MetaProvenance; readonly assumptions: MetaAssumptions; readonly archetypes: readonly MetaArchetype[]; readonly rules: readonly string[] };
-	readonly matchups: readonly MatchupObservation[];
+	readonly profile: { readonly reference: MetaProfileReference; readonly provenance: MetaProvenance; readonly assumptions: MetaAssumptions; readonly communityGuidance: readonly MetaCommunityGuidance[] };
 };
 
 export type EvaluationResult =

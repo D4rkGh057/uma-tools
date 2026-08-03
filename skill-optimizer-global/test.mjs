@@ -24,7 +24,6 @@ const entryPoints = [
 	path.join(dirname, 'optimizer', 'hp.test.ts'),
 	path.join(dirname, 'optimizer', 'evaluation.test.ts'),
 	path.join(dirname, 'optimizer', 'modeAdapters.test.ts'),
-	path.join(dirname, 'optimizer', 'metaMatchup.test.ts'),
 	path.join(dirname, 'components', 'ResultPanel.test.ts'),
 	path.join(dirname, 'components', 'MetaMatchupPanel.test.ts'),
 	path.join(dirname, 'components', 'ModeSelector.test.ts'),
@@ -32,6 +31,7 @@ const entryPoints = [
 	path.join(dirname, 'components', 'presentationSemantics.test.ts'),
 	path.join(dirname, 'appPresentation.test.ts'),
 	path.join(dirname, 'optimizerBuildStorage.test.ts'),
+	path.join(dirname, 'communityGuidanceStorage.test.ts'),
 	path.join(dirname, '..', 'umalator', 'resultsState.test.ts'),
 ];
 

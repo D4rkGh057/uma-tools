@@ -54,7 +54,7 @@ test('evaluation preserves purchase outputs across declared modes', () => {
 	}
 });
 
-test('evaluation resolves an exact Champions Meeting profile into qualitative archetype evidence', () => {
+test('evaluation resolves an exact Champions Meeting profile into its curated provenance, assumptions, and community guidance', () => {
 	const result = evaluate({
 		...purchaseInput,
 		mode: 'ChampionsMeeting',
@@ -65,15 +65,10 @@ test('evaluation resolves an exact Champions Meeting profile into qualitative ar
 	assert.equal(result.mode, 'ChampionsMeeting');
 	assert.deepEqual(result.profile, {
 		reference: { id: 'cm-mile', version: '2026.1' },
-		provenance: { source: 'curated CM matchup notes', reviewedAt: '2026-07-30' },
-		assumptions: { course: '1600m turf', lobby: 'profile-scoped opponents' },
-		archetypes: [{ id: 'runner', label: 'Front runner' }, { id: 'pacer', label: 'Pace leader' }],
-		rules: ['Use pairwise or pacer evidence only'],
+		provenance: { source: 'gametora.com/umamusume/events/champions-meeting (CM 17 - Virgo Cup)', reviewedAt: '2026-08-02' },
+		assumptions: { course: '2000m dirt, Ooi, right-handed, good, autumn, sunny', lobby: 'profile-scoped opponents' },
+		communityGuidance: [],
 	});
-	assert.deepEqual(result.matchups, [
-		{ archetype: { id: 'runner', label: 'Front runner' }, status: 'ready', observation: 'supported', evidence: { scope: 'pairwise', coverage: '1 pair', reproduction: 'seeded pairwise fixture', simulatorVersion: 'umalator-1' } },
-		{ archetype: { id: 'pacer', label: 'Pace leader' }, status: 'ready', observation: 'mixed', evidence: { scope: 'pacer', coverage: '1 pacer fixture', reproduction: 'seeded pacer fixture', simulatorVersion: 'umalator-1' } },
-	]);
 });
 
 test('evaluation fails closed for absent, unresolved, and mode-mismatched meta profiles', () => {
