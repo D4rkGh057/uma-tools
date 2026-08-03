@@ -391,7 +391,7 @@ test('app.css scopes separated recommended-purchase rows and their narrow-screen
 // function here -- it needs a real Preact render, which needs a DOM this Node harness does not have.
 // Its ready/empty/retained message content is exercised above through the real
 // `resultPanelStateContent`/`readyResultContent` production functions it renders from.
-test('MetaMatchupPanel renders its matchup output as a labeled, live feedback region with result-derived content', () => {
+test('MetaMatchupPanel renders its community guidance output as a labeled, live feedback region with result-derived content', () => {
 	const result: MetaEvaluationResult = {
 		status: 'ready', mode: 'ChampionsMeeting',
 		purchase: { totalCost: 0, totalScore: 0, picks: [], situational: [] }, breakdown: [],
@@ -399,10 +399,8 @@ test('MetaMatchupPanel renders its matchup output as a labeled, live feedback re
 			reference: { id: 'cm-mile', version: '2026.1' },
 			provenance: { source: 'curated CM matchup notes', reviewedAt: '2026-07-30' },
 			assumptions: { course: '1600m turf', lobby: 'profile-scoped opponents' },
-			archetypes: [{ id: 'runner', label: 'Front runner' }],
-			rules: ['Use pairwise or pacer evidence only'],
+			communityGuidance: [],
 		},
-		matchups: [{ archetype: { id: 'runner', label: 'Front runner' }, status: 'ready', observation: 'supported', evidence: { scope: 'pairwise', coverage: '1 pair', reproduction: 'seeded pairwise fixture', simulatorVersion: 'umalator-1' } }],
 	};
 
 	const panel = MetaMatchupPanel({ result });

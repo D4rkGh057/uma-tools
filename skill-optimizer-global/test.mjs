@@ -26,6 +26,7 @@ const entryPoints = [
 	path.join(dirname, 'optimizer', 'modeAdapters.test.ts'),
 	path.join(dirname, 'components', 'ResultPanel.test.ts'),
 	path.join(dirname, 'components', 'MetaMatchupPanel.test.ts'),
+	path.join(dirname, 'components', 'CommunityGuidanceForm.test.ts'),
 	path.join(dirname, 'components', 'ModeSelector.test.ts'),
 	path.join(dirname, 'components', 'umaInput.test.ts'),
 	path.join(dirname, 'components', 'presentationSemantics.test.ts'),

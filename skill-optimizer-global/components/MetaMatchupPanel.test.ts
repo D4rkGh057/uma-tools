@@ -1,7 +1,9 @@
+import { h } from 'preact';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { metaMatchupPanelContent } from './MetaMatchupPanel';
+import { metaMatchupPanelContent, MetaMatchupPanel } from './MetaMatchupPanel';
+import { renderToContainer } from '../testUtils/domRender';
 import type { MetaEvaluationResult } from '../optimizer/types';
 
 const championsMeetingResult: MetaEvaluationResult = {
@@ -13,25 +15,16 @@ const championsMeetingResult: MetaEvaluationResult = {
 		reference: { id: 'cm-mile', version: '2026.1' },
 		provenance: { source: 'curated CM matchup notes', reviewedAt: '2026-07-30' },
 		assumptions: { course: '1600m turf', lobby: 'profile-scoped opponents' },
-		archetypes: [{ id: 'runner', label: 'Front runner' }, { id: 'pacer', label: 'Pace leader' }],
-		rules: ['Use pairwise or pacer evidence only'],
+		communityGuidance: [],
 	},
-	matchups: [
-		{ archetype: { id: 'runner', label: 'Front runner' }, status: 'ready', observation: 'supported', evidence: { scope: 'pairwise', coverage: '1 pair', reproduction: 'seeded pairwise fixture', simulatorVersion: 'umalator-1' } },
-		{ archetype: { id: 'pacer', label: 'Pace leader' }, status: 'unavailable', reason: 'No profile-scoped evidence covers this archetype' },
-	],
 };
 
-test('MetaMatchupPanel exposes result-owned CM provenance, assumptions, rules, and covered or unavailable observations', () => {
+test('MetaMatchupPanel exposes result-owned CM provenance and assumptions', () => {
 	assert.deepEqual(metaMatchupPanelContent(championsMeetingResult), {
 		heading: 'CM profile',
 		provenance: 'cm-mile v2026.1 — curated CM matchup notes; reviewed 2026-07-30',
 		assumptions: 'Course: 1600m turf; lobby: profile-scoped opponents',
-		rules: ['Use pairwise or pacer evidence only'],
-		matchups: [
-			'Front runner: supported; pairwise-scoped; coverage 1 pair; reproduction seeded pairwise fixture; simulator umalator-1',
-			'Pace leader: unavailable — No profile-scoped evidence covers this archetype',
-		],
+		communityGuidance: [],
 	});
 });
 
@@ -54,24 +47,81 @@ test('MetaMatchupPanel has no profile content before a result-owned meta evaluat
 	assert.equal(metaMatchupPanelContent(null), null);
 });
 
-test('MetaMatchupPanel reports every declared archetype as unavailable when its matchup entry is missing from the result', () => {
-	const missingCoverageResult: MetaEvaluationResult = {
+test('MetaMatchupPanel reports no community guidance groups when neither the profile nor local storage declares any', () => {
+	assert.deepEqual(metaMatchupPanelContent(championsMeetingResult)?.communityGuidance, []);
+});
+
+test('MetaMatchupPanel groups catalog and local guidance covering the same style under one shared group, in style order', () => {
+	const guidedResult: MetaEvaluationResult = {
 		...championsMeetingResult,
 		profile: {
 			...championsMeetingResult.profile,
-			archetypes: [
-				...championsMeetingResult.profile.archetypes,
-				{ id: 'closer', label: 'Late closer' },
-				{ id: 'stalker', label: 'Stalker' },
+			communityGuidance: [
+				{ source: 'curated CM guide', byStyle: { 5: { idealStats: { speed: 1300 } }, 1: { skillTiers: { core: ['Straightaway Recovery'] } } } },
 			],
 		},
-		// matchups intentionally omits 'closer' and 'stalker' entirely (not just marked unavailable)
+	};
+	const localGuidance = [
+		{ source: 'moomoocows CM tier guide', byStyle: { 5: { skillTiers: { good: ['Speed Star'] } } } },
+	];
+
+	const groups = metaMatchupPanelContent(guidedResult, localGuidance)?.communityGuidance;
+	assert.deepEqual(groups, [
+		{
+			style: 1,
+			label: 'Front Runner',
+			items: [
+				{ source: 'curated CM guide', idealStats: [], skillTiers: [{ tier: 'core', skills: ['Straightaway Recovery'] }] },
+			],
+		},
+		{
+			style: 5,
+			label: 'Runaway',
+			items: [
+				{ source: 'curated CM guide', idealStats: [{ stat: 'speed', value: 1300 }], skillTiers: [] },
+				{ source: 'moomoocows CM tier guide', idealStats: [], skillTiers: [{ tier: 'good', skills: ['Speed Star'] }] },
+			],
+		},
+	]);
+});
+
+test('MetaMatchupPanel omits styles with no guidance from any source', () => {
+	const guidedResult: MetaEvaluationResult = {
+		...championsMeetingResult,
+		profile: {
+			...championsMeetingResult.profile,
+			communityGuidance: [{ source: 'curated CM guide', byStyle: { 2: { idealStats: { power: 900 } } } } ],
+		},
 	};
 
-	assert.deepEqual(metaMatchupPanelContent(missingCoverageResult)?.matchups, [
-		'Front runner: supported; pairwise-scoped; coverage 1 pair; reproduction seeded pairwise fixture; simulator umalator-1',
-		'Pace leader: unavailable — No profile-scoped evidence covers this archetype',
-		'Late closer: unavailable — No matchup entry recorded for this archetype',
-		'Stalker: unavailable — No matchup entry recorded for this archetype',
-	]);
+	const groups = metaMatchupPanelContent(guidedResult)?.communityGuidance;
+	assert.deepEqual(groups?.map(group => group.style), [2]);
+	assert.equal(groups?.some(group => group.style === 4), false);
+});
+
+test('MetaMatchupPanel renders one heading per guidance-covered style, hides guidance-free styles, and labels each item by source', () => {
+	const guidedResult: MetaEvaluationResult = {
+		...championsMeetingResult,
+		profile: {
+			...championsMeetingResult.profile,
+			communityGuidance: [{ source: 'curated CM guide', byStyle: { 1: { idealStats: { speed: 1200 } } } }],
+		},
+	};
+	const localGuidance = [{ source: 'moomoocows CM tier guide', byStyle: { 3: { skillTiers: { situational: ['Uma Stan'] } } } }];
+
+	const container = renderToContainer(h(MetaMatchupPanel, { result: guidedResult, localGuidance }));
+
+	const headings = Array.from(container.querySelectorAll('.meta-matchup-panel-community h4')).map(el => el.textContent);
+	assert.deepEqual(headings, ['Front Runner', 'Late Surger']);
+
+	const communitySection = container.querySelector('.meta-matchup-panel-community')!;
+	assert.ok(communitySection.textContent?.includes('curated CM guide'));
+	assert.ok(communitySection.textContent?.includes('moomoocows CM tier guide'));
+
+	// Guidance-free styles never get a heading or row.
+	assert.equal(Array.from(communitySection.querySelectorAll('h4')).some(h4 => h4.textContent === 'Pace Chaser'), false);
+});
+
+test('MetaMatchupPanel has no rendered output before a result-owned meta evaluation exists', () => {
+	assert.equal(MetaMatchupPanel({ result: null }), null);
 });

@@ -10,11 +10,13 @@ import { HintTable } from './components/HintTable';
 import { ResultPanel } from './components/ResultPanel';
 import { ModeSelector } from './components/ModeSelector';
 import { MetaMatchupPanel } from './components/MetaMatchupPanel';
+import { CommunityGuidanceForm } from './components/CommunityGuidanceForm';
 import { evaluate } from './optimizer/evaluation';
 import { profileCatalog } from './optimizer/profiles/catalog';
-import { MetaProfileReference } from './optimizer/profiles/types';
+import { MetaCommunityGuidance, MetaProfileReference } from './optimizer/profiles/types';
 import { EvaluationMode, EvaluationRequest, EvaluationResult, HintInput, OptimizeInput } from './optimizer/types';
 import { clearOptimizerBuild, defaultOptimizerBuildState, EntryMode, loadOptimizerBuildOutcome, ManualUmaState, OptimizerBuildSelection, saveOptimizerBuild } from './optimizerBuildStorage';
+import { addCommunityGuidance, loadCommunityGuidance } from './communityGuidanceStorage';
 import { ResultPanelState } from './components/resultPanelState';
 
 // Wires the input panels' state into `optimizer/optimize.ts`'s `OptimizeInput` and renders the result
@@ -38,6 +40,7 @@ export function App({ evaluator = evaluate }: AppProps) {
 	const [hints, setHints] = useState<HintInput>(initialBuild.hints);
 	const [mode, setMode] = useState<EvaluationMode>(initialSelection.mode);
 	const [profile, setProfile] = useState<MetaProfileReference | undefined>(initialSelection.profile);
+	const [localGuidance, setLocalGuidance] = useState<readonly MetaCommunityGuidance[]>(() => initialSelection.profile ? loadCommunityGuidance(initialSelection.profile) : []);
 	const [result, setResult] = useState<EvaluationResult | null>(null);
 	const [state, setState] = useState<ResultPanelState | null>(initialLoad.status === 'migrated' ? initialLoad : initialLoad.status === 'rejected' ? { status: 'invalid', mode: 'persisted', reason: initialLoad.reason } : null);
 	const [resetKey, setResetKey] = useState(0);
@@ -78,8 +81,15 @@ export function App({ evaluator = evaluate }: AppProps) {
 	function changeMode(nextMode: EvaluationMode) {
 		setMode(nextMode);
 		const nextProfile = profileCatalog.find(candidate => candidate.mode === nextMode);
-		setProfile(nextProfile && { id: nextProfile.id, version: nextProfile.version });
+		const nextReference = nextProfile && { id: nextProfile.id, version: nextProfile.version };
+		setProfile(nextReference);
+		setLocalGuidance(nextReference ? loadCommunityGuidance(nextReference) : []);
 		setResult(null);
+	}
+
+	function addGuidance(entry: MetaCommunityGuidance) {
+		if (!profile) return;
+		setLocalGuidance(addCommunityGuidance(profile, entry));
 	}
 
 	function resetBuild() {
@@ -100,6 +110,7 @@ export function App({ evaluator = evaluate }: AppProps) {
 		setHints(defaults.hints);
 		setMode('Score');
 		setProfile(undefined);
+		setLocalGuidance([]);
 		setResult(null);
 		setState(null);
 		setResetKey(key => key + 1);
@@ -143,7 +154,8 @@ export function App({ evaluator = evaluate }: AppProps) {
 						<section class="optimizer-section" aria-labelledby="step-4-heading">
 							<h2 id="step-4-heading">4. Evaluation mode</h2>
 							<ModeSelector mode={mode} onChange={changeMode} />
-							<MetaMatchupPanel result={metaResult} />
+							<MetaMatchupPanel result={metaResult} localGuidance={localGuidance} />
+							{(mode === 'ChampionsMeeting' || mode === 'LeagueOfHeroes') && profile && <CommunityGuidanceForm onAdd={addGuidance} />}
 						</section>
 					</div>
 					<div class="optimizer-output-group">
